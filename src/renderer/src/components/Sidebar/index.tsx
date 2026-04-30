@@ -424,14 +424,6 @@ export function Sidebar({
         // Get the base branch (the branch we branched from), fallback to 'main'
         const baseBranch = worktreeMenuOpen.workspace.baseBranch || 'main'
 
-        console.log('[handleMergeToMain] ========== START ==========')
-        console.log('[handleMergeToMain] Worktree:', worktreeMenuOpen.workspace.name)
-        console.log('[handleMergeToMain] Worktree path:', worktreeMenuOpen.workspace.path)
-        console.log('[handleMergeToMain] Worktree branch:', worktreeMenuOpen.workspace.branchName)
-        console.log('[handleMergeToMain] Base branch:', baseBranch)
-        console.log('[handleMergeToMain] Parent workspace:', parentWorkspace.name)
-        console.log('[handleMergeToMain] Parent path:', parentWorkspace.path)
-
         const result = await window.api.showMessageBox({
             type: 'question',
             title: 'Merge Worktree',
@@ -444,19 +436,11 @@ export function Sidebar({
 
         try {
             // First, checkout the base branch in parent workspace
-            console.log('[handleMergeToMain] Checking out base branch:', baseBranch)
             await window.api.gitCheckout(parentWorkspace.path, baseBranch)
-
-            console.log('[handleMergeToMain] Calling gitMerge...')
-            console.log('[handleMergeToMain] - path:', parentWorkspace.path)
-            console.log('[handleMergeToMain] - branch:', worktreeMenuOpen.workspace.branchName)
 
             const mergeResult = await window.api.gitMerge(parentWorkspace.path, worktreeMenuOpen.workspace.branchName!)
 
-            console.log('[handleMergeToMain] gitMerge result:', JSON.stringify(mergeResult, null, 2))
-
             if (mergeResult.success) {
-                console.log('[handleMergeToMain] Merge SUCCESS')
                 // Check if already up to date (no actual changes)
                 if (mergeResult.data?.alreadyUpToDate) {
                     await showAlert('Already Up to Date', 'The branch has no new commits to merge.')

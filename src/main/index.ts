@@ -35,11 +35,11 @@ const getRipgrepPath = (): string => {
     if (is.dev) {
         // In development mode, use node_modules path
         const devPath = path.join(__dirname, '../../node_modules/@vscode/ripgrep/bin/rg')
-        console.log('[getRipgrepPath] Development mode, using:', devPath)
+        // Development mode: use node_modules path
         return devPath
     }
     // In production mode, use bundled path
-    console.log('[getRipgrepPath] Production mode, using:', rgPath)
+    // Production mode: use bundled path
     return rgPath
 }
 
@@ -56,7 +56,7 @@ const fixPath = async (): Promise<void> => {
         const shellPath = stdout.trim()
         if (shellPath) {
             process.env.PATH = shellPath
-            console.log('[fixPath] PATH updated from shell:', shellPath.substring(0, 100) + '...')
+            // PATH updated from shell
         }
     } catch (e) {
         console.error('[fixPath] Failed to get shell PATH:', e)
@@ -152,14 +152,14 @@ function ensureHomeWorkspace(): Workspace | null {
 
         // Check if home workspace is disabled in settings (default: true)
         const showHomeWorkspace = settings?.showHomeWorkspace ?? true
-        console.log('[Home Workspace] showHomeWorkspace setting:', showHomeWorkspace, 'existingHome:', !!existingHome)
+        // Home workspace setup
 
         if (!showHomeWorkspace) {
             // Remove existing home workspace if disabled
             if (existingHome) {
                 const filtered = workspaces.filter(w => !w.isHome)
                 store.set('workspaces', filtered)
-                console.log('[Home Workspace] Removed (disabled in settings)')
+                // Home workspace removed
             }
             return null
         }
@@ -197,7 +197,7 @@ function ensureHomeWorkspace(): Workspace | null {
                     cwd: homePath
                 }))
                 store.set('workspaces', workspaces)
-                console.log('[Home Workspace] Path updated:', homePath)
+                // Home workspace path updated
             }
             return existingHome
         }
@@ -239,7 +239,7 @@ function ensureHomeWorkspace(): Workspace | null {
 
         // Add home workspace at the beginning
         store.set('workspaces', [homeWorkspace, ...workspaces])
-        console.log('[Home Workspace] Created:', homeName, 'at', homePath)
+        // Home workspace created
 
         return homeWorkspace
     } catch (error) {
@@ -544,12 +544,10 @@ function createFullscreenTerminalWindow(sessionIds: string[]): void {
 // Validate cliSessionIds on startup against Claude's actual session storage.
 // If the JSONL file doesn't exist, the session was never saved — clear the stale ID.
 function validateCliSessionIds(): void {
-    console.log('[validateCliSessionIds] Starting validation...')
     const claudeDir = process.env.CLAUDE_CONFIG_DIR || path.join(os.homedir(), '.claude')
     const projectsDir = path.join(claudeDir, 'projects')
 
     if (!existsSync(projectsDir)) {
-        console.log('[validateCliSessionIds] Claude projects dir not found:', projectsDir)
         return
     }
 
@@ -573,17 +571,14 @@ function validateCliSessionIds(): void {
         return
     }
 
-    console.log(`[validateCliSessionIds] Found ${existingSessionIds.size} session(s) in Claude storage`)
+    // Validate existing CLI sessions
 
     const workspaces = store.get('workspaces') as Workspace[]
     let modified = false
     for (const ws of workspaces) {
         for (const session of ws.sessions) {
             if (session.cliSessionId) {
-                if (existingSessionIds.has(session.cliSessionId)) {
-                    console.log(`[validateCliSessionIds] KEEP session ${session.cliSessionId} (file exists)`)
-                } else {
-                    console.log(`[validateCliSessionIds] CLEAR stale session ${session.cliSessionId} (no file)`)
+                if (!existingSessionIds.has(session.cliSessionId)) {
                     delete session.cliSessionId
                     delete session.cliToolName
                     modified = true
@@ -612,7 +607,6 @@ function clearAllCliSessionIds(): void {
         }
     }
     if (modified) {
-        console.log(`[clearAllCliSessionIds] Cleared ${count} CLI session(s)`)
         store.set('workspaces', workspaces)
     }
 }
@@ -675,7 +669,7 @@ app.whenReady().then(async () => {
             app.dock.setIcon(icon)
         } catch (e) {
             // Icon loading may fail in packaged app, but icon.icns is used automatically
-            console.log('Dock icon set via icon.icns')
+            // Dock icon set
         }
     }
 
@@ -749,7 +743,7 @@ app.whenReady().then(async () => {
 
     // Update CLI session info on a session (from renderer, e.g., template rewrite)
     ipcMain.handle('update-session-cli-info', (_, workspaceId: string, sessionId: string, cliSessionId: string, cliToolName: string): boolean => {
-        console.log(`[update-session-cli-info] Persisting cliSessionId=${cliSessionId} for session=${sessionId}`)
+        // Persist CLI session info
         const workspaces = store.get('workspaces') as Workspace[]
         const ws = workspaces.find((w: Workspace) => w.id === workspaceId)
         if (!ws) return false
@@ -777,7 +771,7 @@ app.whenReady().then(async () => {
     // Rewrite a command through CLISessionTracker (for template/initialCommand)
     ipcMain.handle('rewrite-cli-command', (_, command: string): { command: string; cliSessionId: string; cliToolName: string } | null => {
         const result = cliSessionTracker.rewriteCommand(command)
-        console.log(`[rewrite-cli-command] "${command}" → ${result ? `"${result.command}" (id=${result.cliSessionId})` : 'null (not a CLI tool)'}`)
+        // Rewrite CLI command if applicable
         return result
     })
 
@@ -957,7 +951,7 @@ app.whenReady().then(async () => {
 
         // Prevent deletion of home workspace
         if (workspace.isHome) {
-            console.log('[remove-workspace] Cannot delete home workspace')
+            // Cannot delete home workspace
             return false
         }
 
@@ -971,7 +965,7 @@ app.whenReady().then(async () => {
                 try {
                     // 1. git worktree remove <path>
                     await git.raw(['worktree', 'remove', workspace.path, '--force'])
-                    console.log(`Removed worktree: ${workspace.path}`)
+                    // Worktree removed
                 } catch (e) {
                     console.error('Failed to remove worktree:', e)
                     // Continue even if failed (may already be deleted)
@@ -982,7 +976,7 @@ app.whenReady().then(async () => {
                     try {
                         // -D flag for force delete (including unmerged branches)
                         await git.branch(['-D', workspace.branchName])
-                        console.log(`Deleted local branch: ${workspace.branchName}`)
+                        // Local branch deleted
                     } catch (e) {
                         console.error('Failed to delete branch:', e)
                         // Continue with workspace deletion even if branch deletion fails
@@ -1456,7 +1450,7 @@ app.whenReady().then(async () => {
 
             if (!tracking && currentBranch) {
                 // No upstream set - push with --set-upstream
-                console.log(`[git-push] No upstream for '${currentBranch}', setting upstream to origin/${currentBranch}`)
+                // Set upstream for new branch
                 await git.push(['--set-upstream', 'origin', currentBranch])
             } else {
                 // Upstream exists - normal push

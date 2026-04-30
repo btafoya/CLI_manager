@@ -396,7 +396,6 @@ export function TerminalView({
 
         // URL links addon (http://, https://, localhost, etc.)
         const webLinksAddon = new WebLinksAddon((_event, uri) => {
-            console.log('[WebLinks] Clicked:', uri)
             window.open(uri, '_blank')
         })
         term.loadAddon(webLinksAddon)
@@ -567,12 +566,8 @@ export function TerminalView({
             const newWidth = Math.round(rect.width)
             const newHeight = Math.round(rect.height)
 
-            // DEBUG 로그
-            console.log(`[Terminal ${id.slice(0, 8)}] handleResize: container=${newWidth}x${newHeight}`)
-
             if (!lastSizeRef.current) {
                 lastSizeRef.current = { width: newWidth, height: newHeight }
-                console.log(`[Terminal ${id.slice(0, 8)}] handleResize: initial size set`)
                 return
             }
 
@@ -580,11 +575,9 @@ export function TerminalView({
             const heightChanged = Math.abs(newHeight - lastSizeRef.current.height) >= 1
 
             if (!widthChanged && !heightChanged) {
-                console.log(`[Terminal ${id.slice(0, 8)}] handleResize: no change, skipping`)
                 return
             }
 
-            console.log(`[Terminal ${id.slice(0, 8)}] handleResize: size changed from ${lastSizeRef.current.width}x${lastSizeRef.current.height}`)
             lastSizeRef.current = { width: newWidth, height: newHeight }
 
             requestResize()
@@ -609,13 +602,9 @@ export function TerminalView({
             const newWidth = Math.round(rect.width)
             const newHeight = Math.round(rect.height)
 
-            // DEBUG 로그
-            console.log(`[Terminal ${id.slice(0, 8)}] ResizeObserver: container=${newWidth}x${newHeight}`)
-
             // 초기값 설정
             if (!lastSizeRef.current) {
                 lastSizeRef.current = { width: newWidth, height: newHeight }
-                console.log(`[Terminal ${id.slice(0, 8)}] ResizeObserver: initial size set`)
                 return
             }
 
@@ -624,11 +613,9 @@ export function TerminalView({
             const heightChanged = Math.abs(newHeight - lastSizeRef.current.height) >= 1
 
             if (!widthChanged && !heightChanged) {
-                console.log(`[Terminal ${id.slice(0, 8)}] ResizeObserver: no change, skipping`)
                 return
             }
 
-            console.log(`[Terminal ${id.slice(0, 8)}] ResizeObserver: size changed from ${lastSizeRef.current.width}x${lastSizeRef.current.height}`)
             lastSizeRef.current = { width: newWidth, height: newHeight }
 
             requestResize()

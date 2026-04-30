@@ -219,7 +219,7 @@ function App() {
                     setShowUpdateNotification(true)
                 }
             } catch (error) {
-                console.log('Update check failed:', error)
+                console.warn('Update check failed:', error)
             }
         }
 
@@ -999,7 +999,7 @@ function App() {
 
         // Reload workspaces if home workspace settings changed
         if (homeSettingsChanged) {
-            console.log('[Settings] Home workspace settings changed, reloading workspaces...')
+            // Home workspace settings changed, reload workspaces
             await refreshWorkspacesFromStore()
         }
     }

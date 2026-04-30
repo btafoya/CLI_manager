@@ -98,13 +98,11 @@ export function useKeyboardShortcuts(config: UseKeyboardShortcutsConfig): void {
         if (!splitLayout || splitLayout.sessionIds.length === 0) return
         const count = splitLayout.sessionIds.length
         const nextIndex = (activeSplitIndex + direction + count) % count
-        console.log(`[Shortcuts] navigateSplitPane: ${activeSplitIndex} → ${nextIndex}`)
         onSetActiveSplitIndex(nextIndex)
     }, [splitLayout, activeSplitIndex, onSetActiveSplitIndex])
 
     const navigateSession = useCallback((direction: 1 | -1) => {
         if (!activeWorkspace || activeWorkspace.sessions.length === 0) {
-            console.log('[Shortcuts] navigateTab: no active workspace or no sessions')
             return
         }
 
@@ -121,14 +119,12 @@ export function useKeyboardShortcuts(config: UseKeyboardShortcutsConfig): void {
         const nextIndex = currentIndex < 0
             ? 0
             : (currentIndex + direction + sessions.length) % sessions.length
-        console.log(`[Shortcuts] navigateTab: ${currentIndex} → ${nextIndex} (${sessions[nextIndex]?.name})`)
         onSelectSession(activeWorkspace, sessions[nextIndex])
     }, [activeWorkspace, activeSession, splitLayout, onSelectSession, navigateSplitPane])
 
     const navigateWorkspace = useCallback((direction: 1 | -1) => {
         const workspacesWithSessions = sortedWorkspaces.filter(w => w.sessions.length > 0)
         if (workspacesWithSessions.length === 0) {
-            console.log('[Shortcuts] navigateWorkspace: no workspaces with sessions')
             return
         }
 
@@ -139,7 +135,6 @@ export function useKeyboardShortcuts(config: UseKeyboardShortcutsConfig): void {
             ? 0
             : (currentIndex + direction + workspacesWithSessions.length) % workspacesWithSessions.length
         const targetWorkspace = workspacesWithSessions[nextIndex]
-        console.log(`[Shortcuts] navigateWorkspace: ${currentIndex} → ${nextIndex} (${targetWorkspace.name})`)
         onSelectSession(targetWorkspace, targetWorkspace.sessions[0])
     }, [sortedWorkspaces, activeWorkspace, onSelectSession])
 
@@ -168,8 +163,6 @@ export function useKeyboardShortcuts(config: UseKeyboardShortcutsConfig): void {
 
     useEffect(() => {
         const shortcuts = getShortcuts(settings)
-        console.log('[Shortcuts] Effect mounted, registering capture listener')
-
         const handleKeyDown = (e: KeyboardEvent) => {
             // Handle chord mode: waiting for number key after Cmd+T
             if (chordModeRef.current.active) {
@@ -185,14 +178,12 @@ export function useKeyboardShortcuts(config: UseKeyboardShortcutsConfig): void {
                     e.preventDefault()
                     e.stopPropagation()
                     const index = parseInt(e.key, 10)
-                    console.log(`[Shortcuts] Chord: Cmd+T → ${index} (template index)`)
                     cancelChordMode()
                     createSessionWithTemplateIndex(workspaceId, index)
                     return
                 }
 
                 // Any other key cancels chord mode and creates plain terminal
-                console.log(`[Shortcuts] Chord cancelled by key: ${e.key}`)
                 cancelChordMode()
                 onAddSession(workspaceId, undefined)
                 // Don't prevent default - let the key through
@@ -204,7 +195,6 @@ export function useKeyboardShortcuts(config: UseKeyboardShortcutsConfig): void {
 
             // Allow toggleSettings even when modals are open
             if (matchShortcut(e, shortcuts.toggleSettings)) {
-                console.log('[Shortcuts] matched: toggleSettings')
                 e.preventDefault()
                 e.stopPropagation()
                 onToggleSettings()
@@ -213,7 +203,6 @@ export function useKeyboardShortcuts(config: UseKeyboardShortcutsConfig): void {
 
             // Allow toggleMemo even when typing in textarea (memo itself)
             if (matchShortcut(e, shortcuts.toggleMemo)) {
-                console.log('[Shortcuts] matched: toggleMemo')
                 e.preventDefault()
                 e.stopPropagation()
                 onToggleMemo()
@@ -236,15 +225,12 @@ export function useKeyboardShortcuts(config: UseKeyboardShortcutsConfig): void {
                 if (activeWorkspace) {
                     e.preventDefault()
                     e.stopPropagation()
-                    console.log('[Shortcuts] Cmd+T pressed, entering chord mode')
-
                     // Enter chord mode
                     chordModeRef.current = {
                         active: true,
                         workspaceId: activeWorkspace.id,
                         timer: setTimeout(() => {
                             // Timeout: create plain terminal
-                            console.log('[Shortcuts] Chord timeout, creating plain terminal')
                             const wsId = chordModeRef.current.workspaceId
                             cancelChordMode()
                             if (wsId) {
@@ -310,7 +296,6 @@ export function useKeyboardShortcuts(config: UseKeyboardShortcutsConfig): void {
             for (const [action, handler] of Object.entries(actionHandlers)) {
                 const binding = shortcuts[action as ShortcutAction]
                 if (binding && matchShortcut(e, binding)) {
-                    console.log(`[Shortcuts] matched: ${action} (key=${e.key}, meta=${e.metaKey}, ctrl=${e.ctrlKey}, shift=${e.shiftKey})`)
                     e.preventDefault()
                     e.stopPropagation()
                     handler()

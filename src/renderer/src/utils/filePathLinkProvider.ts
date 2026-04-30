@@ -43,7 +43,7 @@ class FilePathLinkProvider implements ILinkProvider {
         private _cwd: string,
         private _handler: (path: string, line?: number, column?: number) => void
     ) {
-        console.log('[FilePathLink] Provider created for cwd:', _cwd)
+        // Provider initialized
     }
 
     provideLinks(lineNumber: number, callback: (links: ILink[] | undefined) => void): void {
@@ -98,8 +98,6 @@ class FilePathLinkProvider implements ILinkProvider {
 
                 matchedRanges.push({ start: matchStart, end: matchEnd })
 
-                console.log('[FilePathLink] Found:', filePath, 'at', { startX, startY, endX, endY })
-
                 links.push({
                     range: {
                         start: { x: startX + 1, y: startY + 1 },
@@ -107,7 +105,6 @@ class FilePathLinkProvider implements ILinkProvider {
                     },
                     text,
                     activate: () => {
-                        console.log('[FilePathLink] Clicked:', filePath, 'line:', line)
                         this._handler(filePath, line, column)
                     }
                 })
