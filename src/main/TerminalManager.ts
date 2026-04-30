@@ -1,6 +1,6 @@
 import { ipcMain, BrowserWindow } from 'electron'
 import os from 'os'
-import { execSync } from 'child_process'
+import { execFileSync } from 'child_process'
 import { existsSync } from 'fs'
 import { CLISessionTracker } from './CLISessionTracker'
 const pty = require('node-pty')
@@ -174,6 +174,13 @@ export class TerminalManager {
             return DEFAULT_SHELL
         }
 
+        // Reject shell names with unsafe characters or path traversal
+        const SAFE_SHELL_NAME = /^[a-zA-Z0-9_\-\/]+$/
+        if (!SAFE_SHELL_NAME.test(requestedShell) || requestedShell.includes('..')) {
+            console.warn(`Invalid shell name '${requestedShell}' — using default`)
+            return DEFAULT_SHELL
+        }
+
         // Absolute path - check if exists
         if (requestedShell.startsWith('/')) {
             if (existsSync(requestedShell)) {
@@ -181,9 +188,9 @@ export class TerminalManager {
             }
             console.warn(`Shell not found at ${requestedShell}, trying fallbacks...`)
         } else {
-            // Relative path - try to resolve with which
+            // Relative path - try to resolve with which (safe array args, no shell injection)
             try {
-                const resolvedPath = execSync(`which ${requestedShell}`, { encoding: 'utf-8' }).trim()
+                const resolvedPath = execFileSync('which', [requestedShell], { encoding: 'utf-8' }).trim()
                 if (resolvedPath && existsSync(resolvedPath)) {
                     return resolvedPath
                 }
@@ -201,7 +208,7 @@ export class TerminalManager {
                 }
             } else {
                 try {
-                    const resolved = execSync(`which ${fallback}`, { encoding: 'utf-8' }).trim()
+                    const resolved = execFileSync('which', [fallback], { encoding: 'utf-8' }).trim()
                     if (resolved && existsSync(resolved)) {
                         console.log(`Using fallback shell: ${resolved}`)
                         return resolved
@@ -288,7 +295,7 @@ export class TerminalManager {
             const pid = ptyProcess.pid
             // Use pgrep to check for child processes (macOS/Linux)
             // Returns non-empty if there are child processes
-            const result = execSync(`pgrep -P ${pid}`, { encoding: 'utf-8' }).trim()
+            const result = execFileSync('pgrep', ['-P', String(pid)], { encoding: 'utf-8' }).trim()
             return result.length > 0
         } catch {
             // pgrep returns exit code 1 if no processes found

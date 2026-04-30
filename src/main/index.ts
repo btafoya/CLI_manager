@@ -9,7 +9,7 @@ import { AppConfig, Workspace, TerminalSession, UserSettings, IPCResult, Workspa
 import { v4 as uuidv4 } from 'uuid'
 import simpleGit from 'simple-git'
 import { existsSync, mkdirSync, readdirSync, statSync, readFileSync } from 'fs'
-import { exec } from 'child_process'
+import { exec, execFileSync } from 'child_process'
 import { promisify } from 'util'
 import os from 'os'
 import { rgPath } from '@vscode/ripgrep'
@@ -75,6 +75,14 @@ const execWithShell = async (command: string, options?: { cwd?: string }): Promi
         return execAsync(`${shell} -l -c 'cd "${escapedCwd}" && ${escapedCommand}'`)
     }
     return execAsync(`${shell} -l -c '${escapedCommand}'`)
+}
+
+/**
+ * Quote a string for safe use as a single shell argument.
+ * Wraps in single quotes and escapes internal single quotes.
+ */
+function shellQuote(str: string): string {
+    return "'" + str.replace(/'/g, "'\\''") + "'"
 }
 
 const store = new Store<AppConfig>({
@@ -1220,6 +1228,12 @@ app.whenReady().then(async () => {
     // Shell Path Validation
     ipcMain.handle('validate-shell-path', async (_, shellPath: string) => {
         try {
+            // Reject unsafe shell paths
+            const SAFE_SHELL_NAME = /^[a-zA-Z0-9_\-\/]+$/
+            if (!SAFE_SHELL_NAME.test(shellPath) || shellPath.includes('..')) {
+                return { valid: false, error: `Invalid shell path: ${shellPath}` }
+            }
+
             // If it's an absolute path, check if file exists
             if (shellPath.startsWith('/')) {
                 if (existsSync(shellPath)) {
@@ -1228,10 +1242,8 @@ app.whenReady().then(async () => {
                     return { valid: false, error: `Shell not found at path: ${shellPath}` }
                 }
             }
-            // Otherwise, use 'which' to find the shell in PATH
-            const shell = process.platform === 'win32' ? 'cmd.exe' : (process.env.SHELL || '/bin/bash')
-            const { stdout } = await execAsync(`${shell} -l -c "which ${shellPath}"`)
-            const resolvedPath = stdout.trim()
+            // Otherwise, use 'which' to find the shell in PATH (safe array args)
+            const resolvedPath = execFileSync('which', [shellPath], { encoding: 'utf-8' }).trim()
             if (resolvedPath) {
                 return { valid: true, resolvedPath }
             } else {
@@ -1260,8 +1272,7 @@ app.whenReady().then(async () => {
             }
 
             // Test by actually opening the selected directory
-            const escapedCommand = editorPath.includes(' ') ? `${editorPath}` : editorPath
-            await execWithShell(`${escapedCommand} "${targetDir}"`)
+            await execWithShell(`${shellQuote(editorPath)} ${shellQuote(targetDir!)}`)
             return { valid: true, resolvedPath: editorPath }
         } catch (e: any) {
             return { valid: false, error: e.message || 'Failed to open editor' }
@@ -1689,7 +1700,7 @@ app.whenReady().then(async () => {
 
     ipcMain.handle('gh-create-pr', async (_, workspacePath: string, title: string, body: string) => {
         try {
-            const { stdout } = await execWithShell(`gh pr create --title "${title}" --body "${body}"`, { cwd: workspacePath })
+            const { stdout } = await execWithShell(`gh pr create --title ${shellQuote(title)} --body ${shellQuote(body)}`, { cwd: workspacePath })
             return { success: true, url: stdout.trim() }
         } catch (e: any) {
             console.error('GitHub PR creation error:', e)
@@ -1756,7 +1767,11 @@ app.whenReady().then(async () => {
 
     ipcMain.handle('gh-merge-pr', async (_, workspacePath: string, prNumber: number) => {
         try {
-            const { stdout } = await execWithShell(`gh pr merge ${prNumber} --merge`, { cwd: workspacePath })
+            const prNum = Number(prNumber)
+            if (!Number.isFinite(prNum) || prNum < 1) {
+                throw new Error(`Invalid PR number: ${prNumber}`)
+            }
+            const { stdout } = await execWithShell(`gh pr merge ${prNum} --merge`, { cwd: workspacePath })
             return { success: true, message: stdout }
         } catch (e: any) {
             console.error('GitHub PR merge error:', e)
@@ -1790,7 +1805,7 @@ app.whenReady().then(async () => {
             }
 
             // Create PR
-            const { stdout } = await execWithShell(`gh pr create --title "${title}" --body "${body}" --head "${branchName}"`, { cwd: workspacePath })
+            const { stdout } = await execWithShell(`gh pr create --title ${shellQuote(title)} --body ${shellQuote(body)} --head ${shellQuote(branchName)}`, { cwd: workspacePath })
             return { success: true, data: { url: stdout.trim() } }
         } catch (e: any) {
             console.error('GitHub PR creation error:', e)
