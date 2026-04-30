@@ -42,7 +42,7 @@ pnpm typecheck
 1. **Main Process** (`src/main/`)
    - `index.ts`: 앱 초기화, IPC 핸들러, 워크스페이스/세션 관리
    - `TerminalManager.ts`: node-pty를 사용한 터미널 프로세스 생성/관리
-   - `PortManager.ts`: macOS `lsof` 명령어로 localhost 포트 모니터링 (5초마다)
+   - `PortManager.ts`: macOS `lsof` / Linux `ss`·`netstat` 명령어로 localhost 포트 모니터링 (5초마다)
 
 2. **Renderer Process** (`src/renderer/`)
    - `App.tsx`: 메인 애플리케이션 컴포넌트, 상태 관리
@@ -196,21 +196,21 @@ User Action (Renderer)
 
 ### macOS-Specific Features
 
-- **Port Monitoring**: `lsof` 명령어는 macOS/Linux 전용이므로 Windows에서는 동작하지 않습니다
+- **Port Monitoring**: macOS는 `lsof`, Linux는 `ss`·`netstat` 사용. Windows에서는 동작하지 않습니다
 - **Vibrancy Effect**: macOS 전용 투명 유리 효과 UI 사용
-- **Default Shell**: macOS는 `zsh`, Windows는 `powershell.exe` 사용
+- **Default Shell**: macOS는 `zsh`, Linux는 `$SHELL` 또는 `bash`, Windows는 `powershell.exe` 사용
 
 ### External Command Execution (PATH Issue)
 
-Finder/Spotlight에서 앱 실행 시 터미널 PATH를 상속받지 못하는 문제가 있습니다.
+Finder/Spotlight 또는 Linux 데스크탑 런처에서 앱 실행 시 터미널 PATH를 상속받지 못하는 문제가 있습니다.
 `code`, `gh`, `git` 등 외부 명령어 실행 시 반드시 **로그인 쉘**을 통해 실행해야 합니다.
 
 ```typescript
-// ❌ 잘못된 방법 - Finder에서 실행 시 PATH 못 찾음
-exec('code .')
+// ❌ 잘못된 방법 - Finder/데스크탑에서 실행 시 PATH 못 찾음
+childProcess.exec('code .')
 
-// ✅ 올바른 방법 - 로그인 쉘로 ~/.zshrc 로드 후 실행
-exec('/bin/zsh -l -c "code ."')
+// ✅ 올바른 방법 - 로그인 쉘로 ~/.zshrc/.bashrc 로드 후 실행
+childProcess.exec('/bin/zsh -l -c "code ."')
 ```
 
 `execWithShell()` 헬퍼 함수가 이를 자동으로 처리합니다 (`src/main/index.ts`).

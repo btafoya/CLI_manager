@@ -51,9 +51,14 @@ nsis:
 linux:
   icon: build/icons
   target:
-    - AppImage
-    - deb
+    - target: AppImage
+      arch:
+        - x64
+    - target: deb
+      arch:
+        - x64
   category: Development
+  maintainer: 'CLI Manager <support@climanager.app>'
 
 # 빌드 디렉토리 설정
 directories:

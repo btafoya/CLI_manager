@@ -88,4 +88,4 @@ jobs:
       - name: Build and publish Linux
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: pnpm build:linux
+        run: pnpm publish:linux

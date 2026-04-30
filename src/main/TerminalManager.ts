@@ -6,12 +6,23 @@ import { CLISessionTracker } from './CLISessionTracker'
 const pty = require('node-pty')
 
 // Default shell based on platform
-const DEFAULT_SHELL = os.platform() === 'win32' ? 'powershell.exe' : 'zsh'
+function getDefaultShell(): string {
+    if (os.platform() === 'win32') return 'powershell.exe'
+    // Use user's configured shell from environment
+    const envShell = process.env.SHELL
+    if (envShell) return envShell
+    // Platform-specific fallback
+    return os.platform() === 'darwin' ? 'zsh' : 'bash'
+}
+
+const DEFAULT_SHELL = getDefaultShell()
 
 // Standard shell paths to try as fallback
 const FALLBACK_SHELLS = os.platform() === 'win32'
     ? ['powershell.exe', 'cmd.exe']
-    : ['/bin/zsh', '/bin/bash', '/bin/sh']
+    : (os.platform() === 'darwin'
+        ? ['/bin/zsh', '/bin/bash', '/bin/sh']
+        : ['/bin/bash', '/bin/sh', '/bin/zsh'])
 
 // ANSI escape sequence regex for stripping colors/formatting
 // Covers: CSI sequences, OSC sequences, DCS/PM/APC sequences, single-char escapes, carriage returns

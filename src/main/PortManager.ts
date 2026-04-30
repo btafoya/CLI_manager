@@ -2,11 +2,15 @@ import { exec } from 'child_process'
 import { BrowserWindow, ipcMain } from 'electron'
 import { PortInfo } from '../shared/types'
 import { promisify } from 'util'
+import { readlink } from 'fs/promises'
+import { parseLsofOutput, parseSsOutput, parseNetstatOutput } from './utils/portParsing'
 
 const execAsync = promisify(exec)
 
 export class PortManager {
     private interval: NodeJS.Timeout | null = null
+    private readonly isMac = process.platform === 'darwin'
+    private readonly isLinux = process.platform === 'linux'
 
     constructor() {
         // Start monitoring
@@ -36,70 +40,81 @@ export class PortManager {
 
     private async checkPorts(): Promise<void> {
         try {
-            // lsof -i -P -n -sTCP:LISTEN
-            const { stdout } = await execAsync('lsof -i -P -n -sTCP:LISTEN')
-            const ports = await this.parseLsof(stdout)
+            let ports: PortInfo[] = []
+
+            if (this.isMac) {
+                ports = await this.checkMacPorts()
+            } else if (this.isLinux) {
+                ports = await this.checkLinuxPorts()
+            } else {
+                // Windows or other: not supported yet
+                ports = []
+            }
+
             this.broadcast(ports)
         } catch (error: any) {
-            // lsof는 결과가 없으면 exit code 1을 반환함
-            if (error.code !== 1) {
-                console.error('lsof error:', error)
-            }
+            console.error('Port check error:', error)
             this.broadcast([])
         }
     }
 
-    private async parseLsof(output: string): Promise<PortInfo[]> {
-        const lines = output.split('\n')
-        const ports: PortInfo[] = []
-        const seen = new Set<string>()
+    private async checkMacPorts(): Promise<PortInfo[]> {
+        const { stdout } = await execAsync('lsof -i -P -n -sTCP:LISTEN')
+        const parsed = parseLsofOutput(stdout)
+        // Add CWD for each port
+        return this.addCwdToPorts(parsed)
+    }
 
-        for (let i = 1; i < lines.length; i++) {
-            const line = lines[i].trim()
-            if (!line) continue
-
-            const parts = line.split(/\s+/)
-            if (parts.length < 9) continue
-
-            const command = parts[0]
-            const pid = parseInt(parts[1])
-            const address = parts[8]
-
-            // 로컬에서 리슨하는 포트 감지 (localhost, 127.0.0.1, * 모두 포함)
-            // *:port는 모든 인터페이스에서 리슨하는 것을 의미
-            const isLocalPort = address.includes('localhost') ||
-                address.includes('127.0.0.1') ||
-                address.includes('*:')
-            if (!isLocalPort) {
-                continue
+    private async checkLinuxPorts(): Promise<PortInfo[]> {
+        // Try ss first (modern Linux), fallback to netstat
+        try {
+            const { stdout } = await execAsync('ss -tlnp')
+            const parsed = parseSsOutput(stdout)
+            return this.addCwdToPorts(parsed)
+        } catch (ssError) {
+            try {
+                const { stdout } = await execAsync('netstat -tlnp')
+                const parsed = parseNetstatOutput(stdout)
+                return this.addCwdToPorts(parsed)
+            } catch (netstatError) {
+                console.error('Neither ss nor netstat available for port monitoring')
+                return []
             }
+        }
+    }
 
-            const portMatch = address.match(/:(\d+)/)
-            if (portMatch) {
-                const port = parseInt(portMatch[1])
-                const key = `${port}-${pid}`
+    private async addCwdToPorts(ports: { port: number; pid: number; command: string }[]): Promise<PortInfo[]> {
+        const result: PortInfo[] = []
+        for (const p of ports) {
+            const cwd = await this.getProcessCwd(p.pid)
+            result.push({ ...p, cwd })
+        }
+        return result
+    }
 
-                if (!seen.has(key)) {
-                    // Fetch CWD
-                    let cwd = ''
-                    try {
-                        // Use -a to ensure we get only the cwd entry for this specific pid
-                        const { stdout } = await execAsync(`lsof -a -p ${pid} -d cwd -F n`)
-                        const match = stdout.match(/^n(.+)$/m)
-                        if (match) {
-                            cwd = match[1]
-                        }
-                    } catch (e) {
-                        // Ignore error
-                    }
-
-                    ports.push({ port, pid, command, cwd })
-                    seen.add(key)
-                }
+    private async getProcessCwd(pid: number): Promise<string> {
+        if (this.isLinux) {
+            // Linux: read /proc/pid/cwd symlink (most reliable)
+            try {
+                const cwd = await readlink(`/proc/${pid}/cwd`)
+                return cwd
+            } catch {
+                // Fallback to lsof if /proc not available
             }
         }
 
-        return ports.sort((a, b) => a.port - b.port)
+        // macOS fallback (and Linux lsof fallback)
+        try {
+            const { stdout } = await execAsync(`lsof -a -p ${pid} -d cwd -F n`)
+            const match = stdout.match(/^n(.+)$/m)
+            if (match) {
+                return match[1]
+            }
+        } catch {
+            // Ignore error
+        }
+
+        return ''
     }
 
     private broadcast(ports: PortInfo[]) {

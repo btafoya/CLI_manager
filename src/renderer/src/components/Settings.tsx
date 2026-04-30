@@ -29,7 +29,7 @@ export function Settings({ isOpen, onClose, onSave, initialCategory = 'general',
         theme: 'dark',
         fontSize: 14,
         fontFamily: 'Monaco, Courier New, monospace',
-        defaultShell: 'zsh',
+        defaultShell: navigator.platform.includes('Mac') ? 'zsh' : 'bash',
         defaultEditor: 'vscode',
         portFilter: {
             enabled: true,
@@ -785,7 +785,7 @@ export function Settings({ isOpen, onClose, onSave, initialCategory = 'general',
                                                         <button
                                                             onClick={() => {
                                                                 setIsCustomShell(false)
-                                                                setSettings(prev => ({ ...prev, defaultShell: 'zsh' }))
+                                                                setSettings(prev => ({ ...prev, defaultShell: navigator.platform.includes('Mac') ? 'zsh' : 'bash' }))
                                                                 setShellValidation({ status: 'idle' })
                                                             }}
                                                             className="text-xs text-blue-400 hover:text-blue-300"

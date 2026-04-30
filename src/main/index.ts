@@ -43,15 +43,15 @@ const getRipgrepPath = (): string => {
     return rgPath
 }
 
-// Fix PATH for packaged app on macOS
-// When launched from Finder/Spotlight, the app doesn't inherit shell PATH
+// Fix PATH for packaged app on macOS and Linux
+// When launched from Finder/Spotlight or desktop, the app doesn't inherit shell PATH
 // This ensures git, gh, and other CLI tools are found
 const fixPath = async (): Promise<void> => {
-    if (process.platform !== 'darwin') return
+    if (process.platform === 'win32') return
     if (process.env.PATH?.includes('/usr/local/bin')) return // Already fixed
 
     try {
-        const shell = process.env.SHELL || '/bin/zsh'
+        const shell = process.env.SHELL || (process.platform === 'darwin' ? '/bin/zsh' : '/bin/bash')
         const { stdout } = await execAsync(`${shell} -l -c 'echo $PATH'`)
         const shellPath = stdout.trim()
         if (shellPath) {
@@ -64,10 +64,10 @@ const fixPath = async (): Promise<void> => {
 }
 
 // Helper function to execute commands with login shell
-// This ensures PATH is properly loaded when app is launched from Finder/Spotlight
+// This ensures PATH is properly loaded when app is launched from Finder/Spotlight or desktop
 // Without this, commands like 'code', 'gh', 'git' may not be found in release builds
 const execWithShell = async (command: string, options?: { cwd?: string }): Promise<{ stdout: string; stderr: string }> => {
-    const shell = process.env.SHELL || '/bin/zsh'
+    const shell = process.env.SHELL || (process.platform === 'darwin' ? '/bin/zsh' : '/bin/bash')
     const escapedCommand = command.replace(/'/g, "'\\''")
 
     if (options?.cwd) {
@@ -86,7 +86,7 @@ const store = new Store<AppConfig>({
             theme: 'dark',
             fontSize: 14,
             fontFamily: 'Monaco, Courier New, monospace',
-            defaultShell: 'zsh',
+            defaultShell: process.platform === 'darwin' ? 'zsh' : 'bash',
             defaultEditor: 'vscode',
             customEditorPath: undefined,
             portFilter: {
@@ -393,17 +393,22 @@ async function syncWorktreeWorkspaces(): Promise<WorktreeSyncSummary> {
 }
 
 function createWindow(): void {
+    // macOS-only window options
+    const macWindowOptions = process.platform === 'darwin' ? {
+        titleBarStyle: 'hiddenInset' as const,
+        vibrancy: 'under-window' as const,
+        visualEffectState: 'active' as const,
+        trafficLightPosition: { x: 15, y: 10 }
+    } : {}
+
     // Create the browser window.
     mainWindow = new BrowserWindow({
         width: 1200,
         height: 800,
         show: false,
         autoHideMenuBar: true,
-        titleBarStyle: 'hiddenInset', // Mac-style title bar
-        vibrancy: 'under-window', // Glass effect
-        visualEffectState: 'active',
-        trafficLightPosition: { x: 15, y: 10 },
         icon,
+        ...macWindowOptions,
         webPreferences: {
             preload: join(__dirname, '../preload/index.js'),
             sandbox: false,
@@ -460,16 +465,20 @@ function createFullscreenTerminalWindow(sessionIds: string[]): void {
         gridWindow.close()
     }
 
+    const macGridOptions = process.platform === 'darwin' ? {
+        titleBarStyle: 'hiddenInset' as const,
+        vibrancy: 'under-window' as const,
+        visualEffectState: 'active' as const,
+        trafficLightPosition: { x: 15, y: 10 }
+    } : {}
+
     const fullscreenWindow = new BrowserWindow({
         width: 1600,
         height: 900,
         show: false,
         autoHideMenuBar: true,
-        titleBarStyle: 'hiddenInset',
-        vibrancy: 'under-window',
-        visualEffectState: 'active',
-        trafficLightPosition: { x: 15, y: 10 },
         icon,
+        ...macGridOptions,
         webPreferences: {
             preload: join(__dirname, '../preload/index.js'),
             sandbox: false,
@@ -1220,7 +1229,7 @@ app.whenReady().then(async () => {
                 }
             }
             // Otherwise, use 'which' to find the shell in PATH
-            const shell = process.platform === 'win32' ? 'cmd.exe' : '/bin/zsh'
+            const shell = process.platform === 'win32' ? 'cmd.exe' : (process.env.SHELL || '/bin/bash')
             const { stdout } = await execAsync(`${shell} -l -c "which ${shellPath}"`)
             const resolvedPath = stdout.trim()
             if (resolvedPath) {
@@ -2162,11 +2171,11 @@ app.whenReady().then(async () => {
                 // Trim whitespace to prevent issues with extra spaces
                 command = customPath.trim()
             } else {
-                // Map editor type to command
+                // Map editor type to command (platform-aware)
                 const editorCommands: Record<string, string> = {
                     'vscode': 'code',
                     'cursor': 'cursor',
-                    'antigravity': 'open -a "Antigravity"'
+                    'antigravity': process.platform === 'darwin' ? 'open -a "Antigravity"' : 'antigravity'
                 }
                 command = editorCommands[editor]
                 if (!command) {
@@ -2175,9 +2184,9 @@ app.whenReady().then(async () => {
             }
 
             // Execute editor command using login shell (via execWithShell helper)
-            // For 'open -a' commands, don't escape (already properly formatted)
+            // For 'open -a' commands on macOS, don't escape (already properly formatted)
             // For other commands, escape if they contain spaces
-            const escapedCommand = command.startsWith('open -a')
+            const escapedCommand = (process.platform === 'darwin' && command.startsWith('open -a'))
                 ? command
                 : (command.includes(' ') ? `"${command}"` : command)
 

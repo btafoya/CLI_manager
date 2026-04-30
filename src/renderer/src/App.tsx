@@ -96,7 +96,7 @@ function App() {
         theme: 'dark',
         fontSize: 14,
         fontFamily: 'Monaco, Courier New, monospace',
-        defaultShell: 'zsh',
+        defaultShell: navigator.platform.includes('Mac') ? 'zsh' : 'bash',
         defaultEditor: 'vscode',
         portFilter: {
             enabled: true,
