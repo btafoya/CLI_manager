@@ -465,9 +465,9 @@ export function Sidebar({
                     await showAlert('Merge Failed', `Merge failed: ${mergeResult.error}`, 'error')
                 }
             }
-        } catch (err: any) {
+        } catch (err) {
             console.error('[handleMergeToMain] Exception:', err)
-            await showAlert('Merge Failed', `Merge failed: ${err.message}`, 'error')
+            await showAlert('Merge Failed', `Merge failed: ${(err instanceof Error ? err.message : String(err))}`, 'error')
         }
         console.log('[handleMergeToMain] ========== END ==========')
     }
@@ -531,9 +531,9 @@ export function Sidebar({
                     await showAlert('Merge Failed', `Merge failed: ${mergeResult.error}`, 'error')
                 }
             }
-        } catch (err: any) {
+        } catch (err) {
             console.error('[handlePullFromMain] Exception:', err)
-            await showAlert('Merge Failed', `Merge failed: ${err.message}`, 'error')
+            await showAlert('Merge Failed', `Merge failed: ${(err instanceof Error ? err.message : String(err))}`, 'error')
         }
         console.log('[handlePullFromMain] ========== END ==========')
     }
@@ -609,9 +609,9 @@ export function Sidebar({
                         onReloadWorktrees={async () => {
                             try {
                                 await onReloadWorktrees()
-                            } catch (err: any) {
+                            } catch (err) {
                                 console.error('Failed to reload worktrees:', err)
-                                await showAlert('Reload Failed', err?.message || 'Failed to reload worktrees.', 'error')
+                                await showAlert('Reload Failed', err instanceof Error ? err.message : String(err), 'error')
                             }
                         }}
                         folders={folders.map(f => ({ id: f.id, name: f.name }))}
@@ -636,9 +636,9 @@ export function Sidebar({
                     onReloadWorktrees={async () => {
                         try {
                             await onReloadWorktrees()
-                        } catch (err: any) {
+                        } catch (err) {
                             console.error('Failed to reload worktrees:', err)
-                            await showAlert('Reload Failed', err?.message || 'Failed to reload worktrees.', 'error')
+                            await showAlert('Reload Failed', err instanceof Error ? err.message : String(err), 'error')
                         }
                     }}
                     onAddSession={(workspaceId, template) => {

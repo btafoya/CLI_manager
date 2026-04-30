@@ -792,9 +792,9 @@ app.whenReady().then(async () => {
         try {
             const result = await syncWorktreeWorkspaces()
             return { success: true, data: result }
-        } catch (e: any) {
+        } catch (e) {
             console.error('[sync-worktree-workspaces] ERROR:', e)
-            return { success: false, error: e.message, errorType: 'UNKNOWN_ERROR' }
+            return { success: false, error: (e instanceof Error ? e.message : String(e)), errorType: 'UNKNOWN_ERROR' }
         }
     })
 
@@ -937,9 +937,9 @@ app.whenReady().then(async () => {
 
             store.set('workspaces', [...workspaces, newWorktreeWorkspace])
             return { success: true, data: newWorktreeWorkspace }
-        } catch (e: any) {
+        } catch (e) {
             console.error('Failed to create worktree:', e)
-            return { success: false, error: e.message, errorType: 'UNKNOWN_ERROR' }
+            return { success: false, error: (e instanceof Error ? e.message : String(e)), errorType: 'UNKNOWN_ERROR' }
         }
     })
 
@@ -1268,8 +1268,8 @@ app.whenReady().then(async () => {
             // Test by actually opening the selected directory
             await execWithShell(`${shellQuote(editorPath)} ${shellQuote(targetDir!)}`)
             return { valid: true, resolvedPath: editorPath }
-        } catch (e: any) {
-            return { valid: false, error: e.message || 'Failed to open editor' }
+        } catch (e) {
+            return { valid: false, error: (e instanceof Error ? e.message : String(e)) || 'Failed to open editor' }
         }
     })
 
@@ -1624,11 +1624,11 @@ app.whenReady().then(async () => {
             console.log('[git-merge] Merge SUCCESS with changes')
             console.log('[git-merge] ========== END ==========')
             return { success: true, data: { merged: true, alreadyUpToDate: false } }
-        } catch (e: any) {
-            console.error('[git-merge] ERROR:', e.message)
+        } catch (e) {
+            console.error('[git-merge] ERROR:', (e instanceof Error ? e.message : String(e)))
             console.error('[git-merge] Full error:', e)
             // Handle conflict case
-            if (e.message?.includes('CONFLICTS') || e.message?.includes('conflict')) {
+            if ((e instanceof Error ? e.message : String(e))?.includes('CONFLICTS') || (e instanceof Error ? e.message : String(e))?.includes('conflict')) {
                 const git = simpleGit(workspacePath)
                 const status = await git.status()
                 console.log('[git-merge] Conflict detected via exception')
@@ -1640,7 +1640,7 @@ app.whenReady().then(async () => {
                     data: { merged: false, conflicts: status.conflicted }
                 }
             }
-            return { success: false, error: e.message, errorType: 'UNKNOWN_ERROR' }
+            return { success: false, error: (e instanceof Error ? e.message : String(e)), errorType: 'UNKNOWN_ERROR' }
         }
     })
 
@@ -1650,9 +1650,9 @@ app.whenReady().then(async () => {
             const git = simpleGit(workspacePath)
             await git.merge(['--abort'])
             return { success: true }
-        } catch (e: any) {
+        } catch (e) {
             console.error('Git merge abort error:', e)
-            return { success: false, error: e.message, errorType: 'UNKNOWN_ERROR' }
+            return { success: false, error: (e instanceof Error ? e.message : String(e)), errorType: 'UNKNOWN_ERROR' }
         }
     })
 
@@ -1664,9 +1664,9 @@ app.whenReady().then(async () => {
             const flag = force ? '-D' : '-d'
             await git.branch([flag, branchName])
             return { success: true }
-        } catch (e: any) {
+        } catch (e) {
             console.error('Git delete branch error:', e)
-            return { success: false, error: e.message, errorType: 'UNKNOWN_ERROR' }
+            return { success: false, error: (e instanceof Error ? e.message : String(e)), errorType: 'UNKNOWN_ERROR' }
         }
     })
 
@@ -1676,9 +1676,9 @@ app.whenReady().then(async () => {
             // gh auth status 명령어로 인증 상태 확인
             const { stdout } = await execWithShell('gh auth status')
             return { authenticated: true, message: stdout }
-        } catch (e: any) {
+        } catch (e) {
             // 인증되지 않은 경우
-            return { authenticated: false, message: e.message }
+            return { authenticated: false, message: (e instanceof Error ? e.message : String(e)) }
         }
     })
 
@@ -1687,8 +1687,8 @@ app.whenReady().then(async () => {
             // gh auth login --web 으로 브라우저 인증
             const { stdout, stderr } = await execWithShell('gh auth login --web')
             return { success: true, message: stdout || stderr }
-        } catch (e: any) {
-            return { success: false, message: e.message }
+        } catch (e) {
+            return { success: false, message: (e instanceof Error ? e.message : String(e)) }
         }
     })
 
@@ -1696,9 +1696,9 @@ app.whenReady().then(async () => {
         try {
             const { stdout } = await execWithShell(`gh pr create --title ${shellQuote(title)} --body ${shellQuote(body)}`, { cwd: workspacePath })
             return { success: true, url: stdout.trim() }
-        } catch (e: any) {
+        } catch (e) {
             console.error('GitHub PR creation error:', e)
-            throw new Error(e.message)
+            throw new Error((e instanceof Error ? e.message : String(e)))
         }
     })
 
@@ -1706,9 +1706,9 @@ app.whenReady().then(async () => {
         try {
             const { stdout } = await execWithShell('gh pr list --json number,title,state,author,url', { cwd: workspacePath })
             return JSON.parse(stdout)
-        } catch (e: any) {
+        } catch (e) {
             console.error('GitHub PR list error:', e)
-            throw new Error(e.message)
+            throw new Error((e instanceof Error ? e.message : String(e)))
         }
     })
 
@@ -1716,7 +1716,7 @@ app.whenReady().then(async () => {
         try {
             const { stdout } = await execWithShell('gh repo view --json name,owner,url,description,defaultBranchRef', { cwd: workspacePath })
             return JSON.parse(stdout)
-        } catch (e: any) {
+        } catch (e) {
             console.error('GitHub repo view error:', e)
             return null
         }
@@ -1726,9 +1726,9 @@ app.whenReady().then(async () => {
         try {
             const { stdout } = await execWithShell('gh run list --json status,conclusion,name,headBranch,createdAt,url --limit 10', { cwd: workspacePath })
             return { success: true, data: JSON.parse(stdout) }
-        } catch (e: any) {
+        } catch (e) {
             console.error('GitHub workflow status error:', e)
-            return { success: false, error: e.message, errorType: 'UNKNOWN_ERROR' }
+            return { success: false, error: (e instanceof Error ? e.message : String(e)), errorType: 'UNKNOWN_ERROR' }
         }
     })
 
@@ -1753,9 +1753,9 @@ app.whenReady().then(async () => {
             // Push branch to origin
             await git.push('origin', branchName, ['--set-upstream'])
             return { success: true }
-        } catch (e: any) {
+        } catch (e) {
             console.error('GitHub push error:', e)
-            return { success: false, error: e.message, errorType: 'UNKNOWN_ERROR' }
+            return { success: false, error: (e instanceof Error ? e.message : String(e)), errorType: 'UNKNOWN_ERROR' }
         }
     })
 
@@ -1767,9 +1767,9 @@ app.whenReady().then(async () => {
             }
             const { stdout } = await execWithShell(`gh pr merge ${prNum} --merge`, { cwd: workspacePath })
             return { success: true, message: stdout }
-        } catch (e: any) {
+        } catch (e) {
             console.error('GitHub PR merge error:', e)
-            throw new Error(e.message)
+            throw new Error((e instanceof Error ? e.message : String(e)))
         }
     })
 
@@ -1801,9 +1801,9 @@ app.whenReady().then(async () => {
             // Create PR
             const { stdout } = await execWithShell(`gh pr create --title ${shellQuote(title)} --body ${shellQuote(body)} --head ${shellQuote(branchName)}`, { cwd: workspacePath })
             return { success: true, data: { url: stdout.trim() } }
-        } catch (e: any) {
+        } catch (e) {
             console.error('GitHub PR creation error:', e)
-            return { success: false, error: e.message, errorType: 'UNKNOWN_ERROR' }
+            return { success: false, error: (e instanceof Error ? e.message : String(e)), errorType: 'UNKNOWN_ERROR' }
         }
     })
 
@@ -1870,9 +1870,9 @@ app.whenReady().then(async () => {
         try {
             await shell.openExternal(url)
             return { success: true }
-        } catch (error: any) {
+        } catch (error) {
             console.error('[openExternal] Error:', error)
-            return { success: false, error: error.message }
+            return { success: false, error: (error instanceof Error ? error.message : String(error)) }
         }
     })
 
@@ -1933,9 +1933,9 @@ app.whenReady().then(async () => {
             }
 
             return { success: true, files }
-        } catch (error: any) {
+        } catch (error) {
             console.error('[searchFiles] Error:', error)
-            return { success: false, error: error.message, files: [] }
+            return { success: false, error: (error instanceof Error ? error.message : String(error)), files: [] }
         }
     })
 
@@ -2121,9 +2121,9 @@ app.whenReady().then(async () => {
                     return { success: true, results, method: 'nodejs' }
                 }
             }
-        } catch (error: any) {
+        } catch (error) {
             console.error('[searchContent] Error:', error)
-            return { success: false, error: error.message, results: [] }
+            return { success: false, error: (error instanceof Error ? error.message : String(error)), results: [] }
         }
     })
 
@@ -2207,10 +2207,10 @@ app.whenReady().then(async () => {
 
             console.log('[open-in-editor] Command executed successfully')
             return { success: true, editor }
-        } catch (e: any) {
-            console.error('[open-in-editor] ERROR:', e.message)
+        } catch (e) {
+            console.error('[open-in-editor] ERROR:', (e instanceof Error ? e.message : String(e)))
             console.error('[open-in-editor] Full error:', e)
-            return { success: false, error: e.message }
+            return { success: false, error: (e instanceof Error ? e.message : String(e)) }
         }
     })
 
@@ -2232,8 +2232,8 @@ app.whenReady().then(async () => {
 
             const content = readFileSync(filePath, 'utf-8')
             return { success: true, content, size: stats.size }
-        } catch (e: any) {
-            return { success: false, error: e.message }
+        } catch (e) {
+            return { success: false, error: (e instanceof Error ? e.message : String(e)) }
         }
     })
 
@@ -2271,8 +2271,8 @@ app.whenReady().then(async () => {
             const base64 = buffer.toString('base64')
 
             return { success: true, data: base64, mimeType, size: stats.size }
-        } catch (e: any) {
-            return { success: false, error: e.message }
+        } catch (e) {
+            return { success: false, error: (e instanceof Error ? e.message : String(e)) }
         }
     })
 
@@ -2386,9 +2386,9 @@ app.whenReady().then(async () => {
             await execWithShell(fullCommand)
 
             return { success: true }
-        } catch (e: any) {
-            console.error('[open-file-in-editor] Error:', e.message)
-            return { success: false, error: e.message }
+        } catch (e) {
+            console.error('[open-file-in-editor] Error:', (e instanceof Error ? e.message : String(e)))
+            return { success: false, error: (e instanceof Error ? e.message : String(e)) }
         }
     })
 
@@ -2611,7 +2611,7 @@ autoUpdater.on('update-downloaded', (info) => {
 
 autoUpdater.on('error', (err) => {
     console.error('Update error:', err)
-    sendUpdateStatus('error', { message: err.message })
+    sendUpdateStatus('error', { message: (err instanceof Error ? err.message : String(err)) })
 })
 
 // IPC handlers for manual update control
@@ -2637,10 +2637,10 @@ ipcMain.handle('check-for-update', async () => {
         } else {
             return { success: true, version: currentVersion, hasUpdate: false }
         }
-    } catch (error: any) {
+    } catch (error) {
         console.error('Update check error:', error)
-        console.error('Error stack:', error.stack)
-        return { success: false, error: error.message }
+        console.error('Error stack:', error instanceof Error ? error.stack : undefined)
+        return { success: false, error: (error instanceof Error ? error.message : String(error)) }
     }
 })
 
@@ -2649,9 +2649,9 @@ ipcMain.handle('download-update', async () => {
     try {
         await autoUpdater.downloadUpdate()
         return { success: true }
-    } catch (error: any) {
+    } catch (error) {
         console.error('Download update error:', error)
-        return { success: false, error: error.message }
+        return { success: false, error: (error instanceof Error ? error.message : String(error)) }
     }
 })
 

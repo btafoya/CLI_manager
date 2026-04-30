@@ -52,7 +52,7 @@ export class PortManager {
             }
 
             this.broadcast(ports)
-        } catch (error: any) {
+        } catch (error) {
             console.error('Port check error:', error)
             this.broadcast([])
         }

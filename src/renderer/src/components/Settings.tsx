@@ -147,8 +147,8 @@ export function Settings({ isOpen, onClose, onSave, initialCategory = 'general',
                 // Already up to date
                 setUpdateState({ status: 'not-available' })
             }
-        } catch (error: any) {
-            setUpdateState({ status: 'error', message: error.message })
+        } catch (error) {
+            setUpdateState({ status: 'error', message: (error instanceof Error ? error.message : String(error)) })
         }
     }
 

@@ -121,8 +121,8 @@ export function FilePreview({ isOpen, onClose, filePath, relativePath, line, onO
                     setError(result.error || 'Failed to read file')
                 }
             }
-        } catch (e: any) {
-            setError(e.message)
+        } catch (e) {
+            setError((e instanceof Error ? e.message : String(e)))
         } finally {
             setLoading(false)
         }

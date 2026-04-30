@@ -66,8 +66,8 @@ export function GitPanel({ workspacePath, isOpen, onClose }: GitPanelProps) {
             if (gitStatus) {
                 setStatus(gitStatus)
             }
-        } catch (err: any) {
-            setError(err.message || 'Failed to load git status')
+        } catch (err) {
+            setError((err instanceof Error ? err.message : String(err)) || 'Failed to load git status')
         } finally {
             setLoading(false)
         }
@@ -79,7 +79,7 @@ export function GitPanel({ workspacePath, isOpen, onClose }: GitPanelProps) {
         try {
             const history = await window.api.gitLog(workspacePath, 20)
             setCommits(history)
-        } catch (err: any) {
+        } catch (err) {
             console.error('Failed to load git history:', err)
         }
     }
@@ -104,8 +104,8 @@ export function GitPanel({ workspacePath, isOpen, onClose }: GitPanelProps) {
             await window.api.gitReset(workspacePath, commitHash, hard)
             await loadStatus()
             await loadHistory()
-        } catch (err: any) {
-            setError(err.message || 'Failed to reset')
+        } catch (err) {
+            setError((err instanceof Error ? err.message : String(err)) || 'Failed to reset')
         } finally {
             setLoading(false)
         }
@@ -146,8 +146,8 @@ export function GitPanel({ workspacePath, isOpen, onClose }: GitPanelProps) {
             if (workflows.success && workflows.data) {
                 setGhWorkflows(workflows.data)
             }
-        } catch (err: any) {
-            setError(err.message || 'Failed to load workflows')
+        } catch (err) {
+            setError((err instanceof Error ? err.message : String(err)) || 'Failed to load workflows')
         } finally {
             setLoading(false)
         }
@@ -163,8 +163,8 @@ export function GitPanel({ workspacePath, isOpen, onClose }: GitPanelProps) {
             } else {
                 setError('GitHub login failed')
             }
-        } catch (err: any) {
-            setError(err.message)
+        } catch (err) {
+            setError((err instanceof Error ? err.message : String(err)))
         } finally {
             setLoading(false)
         }
@@ -182,8 +182,8 @@ export function GitPanel({ workspacePath, isOpen, onClose }: GitPanelProps) {
                 setPrBody('')
                 await checkGitHubAuth() // Refresh PR list
             }
-        } catch (err: any) {
-            setError(err.message || 'Failed to create PR')
+        } catch (err) {
+            setError((err instanceof Error ? err.message : String(err)) || 'Failed to create PR')
         } finally {
             setLoading(false)
         }
@@ -210,8 +210,8 @@ export function GitPanel({ workspacePath, isOpen, onClose }: GitPanelProps) {
         try {
             await window.api.gitStage(workspacePath, file)
             await loadStatus()
-        } catch (err: any) {
-            setError(err.message || 'Failed to stage file')
+        } catch (err) {
+            setError((err instanceof Error ? err.message : String(err)) || 'Failed to stage file')
         } finally {
             setLoading(false)
         }
@@ -224,8 +224,8 @@ export function GitPanel({ workspacePath, isOpen, onClose }: GitPanelProps) {
         try {
             await window.api.gitUnstage(workspacePath, file)
             await loadStatus()
-        } catch (err: any) {
-            setError(err.message || 'Failed to unstage file')
+        } catch (err) {
+            setError((err instanceof Error ? err.message : String(err)) || 'Failed to unstage file')
         } finally {
             setLoading(false)
         }
@@ -239,8 +239,8 @@ export function GitPanel({ workspacePath, isOpen, onClose }: GitPanelProps) {
             // Use gitStageFiles to stage multiple files at once (single git add command)
             await window.api.gitStageFiles(workspacePath, files)
             await loadStatus()
-        } catch (err: any) {
-            setError(err.message || 'Failed to stage all files')
+        } catch (err) {
+            setError((err instanceof Error ? err.message : String(err)) || 'Failed to stage all files')
         } finally {
             setLoading(false)
         }
@@ -253,8 +253,8 @@ export function GitPanel({ workspacePath, isOpen, onClose }: GitPanelProps) {
         try {
             await window.api.gitUnstageAll(workspacePath)
             await loadStatus()
-        } catch (err: any) {
-            setError(err.message || 'Failed to unstage all files')
+        } catch (err) {
+            setError((err instanceof Error ? err.message : String(err)) || 'Failed to unstage all files')
         } finally {
             setLoading(false)
         }
@@ -267,8 +267,8 @@ export function GitPanel({ workspacePath, isOpen, onClose }: GitPanelProps) {
         try {
             await window.api.gitStageAll(workspacePath)
             await loadStatus()
-        } catch (err: any) {
-            setError(err.message || 'Failed to stage all changes')
+        } catch (err) {
+            setError((err instanceof Error ? err.message : String(err)) || 'Failed to stage all changes')
         } finally {
             setLoading(false)
         }
@@ -282,8 +282,8 @@ export function GitPanel({ workspacePath, isOpen, onClose }: GitPanelProps) {
             await window.api.gitCommit(workspacePath, commitMessage)
             setCommitMessage('')
             await loadStatus()
-        } catch (err: any) {
-            setError(err.message || 'Failed to commit')
+        } catch (err) {
+            setError((err instanceof Error ? err.message : String(err)) || 'Failed to commit')
         } finally {
             setLoading(false)
         }
@@ -298,8 +298,8 @@ export function GitPanel({ workspacePath, isOpen, onClose }: GitPanelProps) {
             await window.api.gitPush(workspacePath)
             setCommitMessage('')
             await loadStatus()
-        } catch (err: any) {
-            setError(err.message || 'Failed to commit and push')
+        } catch (err) {
+            setError((err instanceof Error ? err.message : String(err)) || 'Failed to commit and push')
         } finally {
             setLoading(false)
         }
@@ -312,8 +312,8 @@ export function GitPanel({ workspacePath, isOpen, onClose }: GitPanelProps) {
         try {
             await window.api.gitPush(workspacePath)
             await loadStatus()
-        } catch (err: any) {
-            setError(err.message || 'Failed to push')
+        } catch (err) {
+            setError((err instanceof Error ? err.message : String(err)) || 'Failed to push')
         } finally {
             setLoading(false)
         }
@@ -326,8 +326,8 @@ export function GitPanel({ workspacePath, isOpen, onClose }: GitPanelProps) {
         try {
             await window.api.gitPull(workspacePath)
             await loadStatus()
-        } catch (err: any) {
-            setError(err.message || 'Failed to pull')
+        } catch (err) {
+            setError((err instanceof Error ? err.message : String(err)) || 'Failed to pull')
         } finally {
             setLoading(false)
         }
