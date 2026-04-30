@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react'
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { Sidebar } from './components/Sidebar/index'
 import { TerminalView } from './components/TerminalView'
 import { SessionMemo, SessionMemoHandle } from './components/SessionMemo'
@@ -264,10 +264,10 @@ function App() {
         return cleanup
     }, [])
 
-    const handleOnboardingComplete = () => {
+    const handleOnboardingComplete = useCallback(() => {
         setShowOnboarding(false)
         setSettings(prev => ({ ...prev, hasCompletedOnboarding: true }))
-    }
+    }, [])
 
     const handleSelect = (workspace: Workspace, session: TerminalSession) => {
         // If in split view, replace the active pane's session
@@ -349,15 +349,15 @@ function App() {
     // ============================================
 
     // Handle drag over the terminal area for split view
-    const handleTerminalAreaDragOver = (e: React.DragEvent) => {
+    const handleTerminalAreaDragOver = useCallback((e: React.DragEvent) => {
         if (!e.dataTransfer.types.includes('application/x-session-id')) return
         e.preventDefault()
         setDragOverZone('split')
-    }
+    }, [])
 
-    const handleTerminalAreaDragLeave = () => {
+    const handleTerminalAreaDragLeave = useCallback(() => {
         setDragOverZone(null)
-    }
+    }, [])
 
     // Handle drop on terminal area to add to split view
     const handleTerminalAreaDrop = async (e: React.DragEvent) => {
@@ -467,7 +467,7 @@ function App() {
     // Handle drag start from sidebar
     const dragSafetyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-    const handleSidebarDragStart = (sessionId: string) => {
+    const handleSidebarDragStart = useCallback((sessionId: string) => {
         setIsDraggingSession(true)
 
         // Safety: auto-reset after 3s if dragEnd never fires (browser bug, focus loss, etc.)
@@ -476,13 +476,13 @@ function App() {
             setIsDraggingSession(false)
             setDragOverZone(null)
         }, 3000)
-    }
+    }, [])
 
-    const handleSidebarDragEnd = () => {
+    const handleSidebarDragEnd = useCallback(() => {
         setIsDraggingSession(false)
         setDragOverZone(null)
         if (dragSafetyTimerRef.current) clearTimeout(dragSafetyTimerRef.current)
-    }
+    }, [])
 
     // Fallback: document-level dragend to catch missed events
     useEffect(() => {
