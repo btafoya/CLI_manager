@@ -2,14 +2,15 @@
   <img src="resources/logo-final.png" alt="CLI Manager" width="80" />
   <h1>CLI Manager</h1>
   <p><strong>Your CLI Agents, All in One Place.</strong></p>
-  <p>Claude Code, Codex CLI, Gemini CLI — manage them all from a single macOS desktop app.</p>
+  <p>Claude Code, Codex CLI, Gemini CLI — manage them all from a single desktop app.</p>
 
   [![MIT License](https://img.shields.io/badge/license-MIT-green.svg)](./LICENSE)
   [![macOS](https://img.shields.io/badge/platform-macOS-blue.svg)](https://github.com/woorichicken/CLI_manager/releases)
+  [![Linux](https://img.shields.io/badge/platform-Linux-yellow.svg)](https://github.com/woorichicken/CLI_manager/releases)
   [![Open Source](https://img.shields.io/badge/open%20source-%E2%9D%A4-red.svg)](https://github.com/woorichicken/CLI_manager)
   [![GitHub release](https://img.shields.io/github/v/release/woorichicken/CLI_manager)](https://github.com/woorichicken/CLI_manager/releases/latest)
 
-  [**Download for macOS**](https://github.com/woorichicken/CLI_manager/releases/latest) · [Website](https://solhun.com) · [Report a Bug](https://github.com/woorichicken/CLI_manager/issues)
+  [**Download**](https://github.com/woorichicken/CLI_manager/releases/latest) · [Website](https://solhun.com) · [Report a Bug](https://github.com/woorichicken/CLI_manager/issues)
 </div>
 
 ---
@@ -39,7 +40,7 @@ As AI-powered development grows, developers are juggling Claude Code, Codex CLI,
 
 - **Zero state loss** — Terminal sessions live in the DOM (`display: none`), never destroyed on tab switch
 - **Instant session switching** — No re-initialization overhead; switch in milliseconds
-- **Real-time port detection** — Local dev servers detected within 5 seconds via `lsof` polling
+- **Real-time port detection** — Local dev servers detected within 5 seconds via `lsof` (macOS) or `ss`/`netstat` (Linux)
 - **500ms debounced auto-save** — Session memos save automatically without blocking your workflow
 - **Minimal footprint** — Built on Electron + xterm.js with no unnecessary background processes
 
@@ -109,6 +110,7 @@ Every action is bindable. Open the keyboard shortcut editor and make CLI Manager
 |----------|------|
 | macOS Apple Silicon (arm64) | [cli-manager-1.5.0-arm64.dmg](https://pub-dc249db286af4c1991fedf690157891d.r2.dev/cli-manager-1.5.0-arm64.dmg) |
 | macOS Intel (x64) | [cli-manager-1.5.0-x64.dmg](https://pub-dc249db286af4c1991fedf690157891d.r2.dev/cli-manager-1.5.0-x64.dmg) |
+| Linux (AppImage) | [GitHub Releases](https://github.com/woorichicken/CLI_manager/releases/latest) |
 
 Or download from [GitHub Releases](https://github.com/woorichicken/CLI_manager/releases/latest).
 
@@ -137,6 +139,7 @@ pnpm dev
 ```bash
 pnpm build        # Build for current platform
 pnpm build:mac    # Build signed macOS DMG
+pnpm build:linux  # Build Linux AppImage
 ```
 
 ### Type Check
