@@ -1,6 +1,6 @@
 import { contextBridge, ipcRenderer, webUtils } from 'electron'
 import { electronAPI } from '@electron-toolkit/preload'
-import { Workspace, TerminalSession, UserSettings, IPCResult, SystemInfo } from '../shared/types'
+import { Workspace, WorkspaceFolder, TerminalSession, UserSettings, IPCResult, SystemInfo, TerminalTemplate, GitStatus, GitLogEntry, PortInfo } from '../shared/types'
 
 // Custom APIs for renderer
 const api = {
@@ -17,8 +17,8 @@ const api = {
     updateSessionMemo: (workspaceId: string, sessionId: string, memo: string): Promise<boolean> => ipcRenderer.invoke('update-session-memo', workspaceId, sessionId, memo),
     reorderWorkspaces: (workspaceIds: string[]): Promise<boolean> => ipcRenderer.invoke('reorder-workspaces', workspaceIds),
     togglePinWorkspace: (workspaceId: string): Promise<boolean> => ipcRenderer.invoke('toggle-pin-workspace', workspaceId),
-    getFolders: (): Promise<any[]> => ipcRenderer.invoke('get-folders'),
-    createFolder: (name: string): Promise<any> => ipcRenderer.invoke('create-folder', name),
+    getFolders: (): Promise<WorkspaceFolder[]> => ipcRenderer.invoke('get-folders'),
+    createFolder: (name: string): Promise<WorkspaceFolder> => ipcRenderer.invoke('create-folder', name),
     renameFolder: (folderId: string, newName: string): Promise<boolean> => ipcRenderer.invoke('rename-folder', folderId, newName),
     removeFolder: (folderId: string): Promise<boolean> => ipcRenderer.invoke('remove-folder', folderId),
     toggleFolderExpanded: (folderId: string): Promise<boolean> => ipcRenderer.invoke('toggle-folder-expanded', folderId),
@@ -34,8 +34,8 @@ const api = {
     getAppVersion: (): Promise<string> => ipcRenderer.invoke('get-app-version'),
 
     // Templates
-    getTemplates: (): Promise<any[]> => ipcRenderer.invoke('get-templates'),
-    saveTemplates: (templates: any[]): Promise<boolean> => ipcRenderer.invoke('save-templates', templates),
+    getTemplates: (): Promise<TerminalTemplate[]> => ipcRenderer.invoke('get-templates'),
+    saveTemplates: (templates: TerminalTemplate[]): Promise<boolean> => ipcRenderer.invoke('save-templates', templates),
 
     // Split Terminal View
     openFullscreenTerminal: (sessionIds: string[]): Promise<boolean> => ipcRenderer.invoke('open-fullscreen-terminal', sessionIds),
@@ -52,7 +52,7 @@ const api = {
     },
 
     // Git
-    getGitStatus: (workspacePath: string): Promise<any> => ipcRenderer.invoke('get-git-status', workspacePath),
+    getGitStatus: (workspacePath: string): Promise<GitStatus | null> => ipcRenderer.invoke('get-git-status', workspacePath),
     gitStage: (workspacePath: string, file: string): Promise<boolean> => ipcRenderer.invoke('git-stage', workspacePath, file),
     gitStageFiles: (workspacePath: string, files: string[]): Promise<boolean> => ipcRenderer.invoke('git-stage-files', workspacePath, files),
     gitStageAll: (workspacePath: string): Promise<boolean> => ipcRenderer.invoke('git-stage-all', workspacePath),
@@ -61,9 +61,9 @@ const api = {
     gitCommit: (workspacePath: string, message: string): Promise<boolean> => ipcRenderer.invoke('git-commit', workspacePath, message),
     gitPush: (workspacePath: string): Promise<boolean> => ipcRenderer.invoke('git-push', workspacePath),
     gitPull: (workspacePath: string): Promise<boolean> => ipcRenderer.invoke('git-pull', workspacePath),
-    gitLog: (workspacePath: string, limit?: number): Promise<any[]> => ipcRenderer.invoke('git-log', workspacePath, limit),
+    gitLog: (workspacePath: string, limit?: number): Promise<GitLogEntry[]> => ipcRenderer.invoke('git-log', workspacePath, limit),
     gitReset: (workspacePath: string, commitHash: string, hard?: boolean): Promise<boolean> => ipcRenderer.invoke('git-reset', workspacePath, commitHash, hard),
-    gitListBranches: (workspacePath: string): Promise<{ current: string; all: string[]; branches: any; worktreeBranches: string[] } | null> => ipcRenderer.invoke('git-list-branches', workspacePath),
+    gitListBranches: (workspacePath: string): Promise<{ current: string; all: string[]; branches: Record<string, unknown>; worktreeBranches: string[] } | null> => ipcRenderer.invoke('git-list-branches', workspacePath),
     gitCheckout: (workspacePath: string, branchName: string): Promise<boolean> => ipcRenderer.invoke('git-checkout', workspacePath, branchName),
     gitMerge: (workspacePath: string, branchName: string): Promise<{ success: boolean; data?: { merged: boolean; conflicts?: string[] }; error?: string }> => ipcRenderer.invoke('git-merge', workspacePath, branchName),
     gitMergeAbort: (workspacePath: string): Promise<{ success: boolean; error?: string }> => ipcRenderer.invoke('git-merge-abort', workspacePath),
@@ -73,10 +73,10 @@ const api = {
     ghCheckAuth: (): Promise<{ authenticated: boolean; message: string }> => ipcRenderer.invoke('gh-check-auth'),
     ghAuthLogin: (): Promise<{ success: boolean; message: string }> => ipcRenderer.invoke('gh-auth-login'),
     ghCreatePR: (workspacePath: string, title: string, body: string): Promise<{ success: boolean; url: string }> => ipcRenderer.invoke('gh-create-pr', workspacePath, title, body),
-    ghListPRs: (workspacePath: string): Promise<any[]> => ipcRenderer.invoke('gh-list-prs', workspacePath),
-    ghRepoView: (workspacePath: string): Promise<any> => ipcRenderer.invoke('gh-repo-view', workspacePath),
-    ghWorkflowStatus: (workspacePath: string): Promise<any[]> => ipcRenderer.invoke('gh-workflow-status', workspacePath),
-    ghPushBranch: (workspacePath: string, branchName: string): Promise<{ success: boolean }> => ipcRenderer.invoke('gh-push-branch', workspacePath, branchName),
+    ghListPRs: (workspacePath: string): Promise<unknown[]> => ipcRenderer.invoke('gh-list-prs', workspacePath),
+    ghRepoView: (workspacePath: string): Promise<unknown | null> => ipcRenderer.invoke('gh-repo-view', workspacePath),
+    ghWorkflowStatus: (workspacePath: string): Promise<IPCResult<unknown[]>> => ipcRenderer.invoke('gh-workflow-status', workspacePath),
+    ghPushBranch: (workspacePath: string, branchName: string): Promise<IPCResult<void>> => ipcRenderer.invoke('gh-push-branch', workspacePath, branchName),
     ghMergePR: (workspacePath: string, prNumber: number): Promise<{ success: boolean; message: string }> => ipcRenderer.invoke('gh-merge-pr', workspacePath, prNumber),
     ghCreatePRFromWorktree: (workspacePath: string, branchName: string, title: string, body: string): Promise<{ success: boolean; url: string }> => ipcRenderer.invoke('gh-create-pr-from-worktree', workspacePath, branchName, title, body),
 
@@ -99,14 +99,14 @@ const api = {
     writeTerminal: (id: string, data: string): void => ipcRenderer.send('terminal-input', id, data),
     onTerminalData: (id: string, callback: (data: string) => void): () => void => {
         const channel = `terminal-output-${id}`
-        const listener = (_: any, data: string) => callback(data)
+        const listener = (_event: Electron.IpcRendererEvent, data: string) => callback(data)
         ipcRenderer.on(channel, listener)
         return () => ipcRenderer.removeListener(channel, listener)
     },
 
     // CLI Session Tracking
     onCliSessionDetected: (callback: (data: { workspaceId: string; sessionId: string; cliSessionId: string; cliToolName: string }) => void): () => void => {
-        const handler = (_event: Electron.IpcRendererEvent, data: any) => callback(data)
+        const handler = (_event: Electron.IpcRendererEvent, data: { workspaceId: string; sessionId: string; cliSessionId: string; cliToolName: string }) => callback(data)
         ipcRenderer.on('cli-session-detected', handler)
         return () => ipcRenderer.removeListener('cli-session-detected', handler)
     },
@@ -121,8 +121,8 @@ const api = {
     getSystemInfo: (): Promise<SystemInfo> => ipcRenderer.invoke('get-system-info'),
 
     // Ports
-    onPortUpdate: (callback: (ports: any[]) => void): () => void => {
-        const listener = (_: any, ports: any[]) => callback(ports)
+    onPortUpdate: (callback: (ports: PortInfo[]) => void): () => void => {
+        const listener = (_event: Electron.IpcRendererEvent, ports: PortInfo[]) => callback(ports)
         ipcRenderer.on('port-update', listener)
         return () => ipcRenderer.removeListener('port-update', listener)
     },
@@ -131,7 +131,7 @@ const api = {
 
     // Terminal Zoom (Cmd+/- 이벤트 수신)
     onTerminalZoom: (callback: (key: string) => void): () => void => {
-        const listener = (_: any, key: string) => callback(key)
+        const listener = (_event: Electron.IpcRendererEvent, key: string) => callback(key)
         ipcRenderer.on('terminal-zoom', listener)
         return () => ipcRenderer.removeListener('terminal-zoom', listener)
     },
@@ -166,7 +166,7 @@ const api = {
     installUpdate: (): Promise<void> =>
         ipcRenderer.invoke('install-update'),
     onUpdateStatus: (callback: (status: { status: string; version?: string; percent?: number; message?: string }) => void): () => void => {
-        const listener = (_: any, data: any) => callback(data)
+        const listener = (_event: Electron.IpcRendererEvent, data: { status: string; version?: string; percent?: number; message?: string }) => callback(data)
         ipcRenderer.on('update-status', listener)
         return () => ipcRenderer.removeListener('update-status', listener)
     },

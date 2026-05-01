@@ -287,12 +287,6 @@ export class TerminalPatternMatcher {
         const cleanChunk = this.stripAnsi(data)
         if (!cleanChunk.trim()) return null
 
-        // 디버그: 실제 들어오는 데이터 확인
-        if (this.debug) {
-            const preview = cleanChunk.slice(0, 150).replace(/\n/g, '\\n')
-            console.log(`[PatternMatcher] tool=${this.currentTool} | "${preview}"`)
-        }
-
         // 버퍼 관리 (최근 4000자 유지)
         this.buffer = (this.buffer + cleanChunk).slice(-4000)
 
@@ -301,9 +295,6 @@ export class TerminalPatternMatcher {
 
         // 텍스트 패턴 매칭
         const result = this.matchTextPatterns(cleanChunk)
-        if (this.debug && result) {
-            console.log('[PatternMatcher] MATCHED:', result)
-        }
         return result
     }
 

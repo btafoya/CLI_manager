@@ -167,6 +167,27 @@ export interface PortInfo {
 // System Monitor Types
 // ============================================
 
+export interface GitStatus {
+    branch: string
+    modified: string[]
+    staged: string[]
+    untracked: string[]
+    conflicted: string[]
+    deleted: string[]
+    renamed: { from: string; to: string }[]
+    created: string[]
+    ahead: number
+    behind: number
+    isMerging: boolean
+}
+
+export interface GitLogEntry {
+    hash: string
+    message: string
+    author: string
+    date: string
+}
+
 export interface SystemInfo {
     cpu: {
         model: string

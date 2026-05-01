@@ -1,7 +1,7 @@
 /// <reference types="vite/client" />
 
 import { ElectronAPI } from '@electron-toolkit/preload'
-import { Workspace, TerminalSession, UserSettings, IPCResult, PortInfo } from '../../shared/types'
+import { Workspace, WorkspaceFolder, TerminalSession, UserSettings, IPCResult, PortInfo, TerminalTemplate, GitStatus, GitLogEntry } from '../../shared/types'
 
 declare global {
     interface Window {
@@ -31,11 +31,11 @@ declare global {
             showMessageBox: (options: { type: 'info' | 'warning' | 'error' | 'question'; title: string; message: string; buttons: string[]; icon?: string }) => Promise<{ response: number }>
 
             // Templates
-            getTemplates: () => Promise<any[]>
-            saveTemplates: (templates: any[]) => Promise<boolean>
+            getTemplates: () => Promise<TerminalTemplate[]>
+            saveTemplates: (templates: TerminalTemplate[]) => Promise<boolean>
 
             // Git
-            getGitStatus: (workspacePath: string) => Promise<any>
+            getGitStatus: (workspacePath: string) => Promise<GitStatus | null>
             gitStage: (workspacePath: string, file: string) => Promise<boolean>
             gitStageFiles: (workspacePath: string, files: string[]) => Promise<boolean>
             gitStageAll: (workspacePath: string) => Promise<boolean>
@@ -44,9 +44,9 @@ declare global {
             gitCommit: (workspacePath: string, message: string) => Promise<boolean>
             gitPush: (workspacePath: string) => Promise<boolean>
             gitPull: (workspacePath: string) => Promise<boolean>
-            gitLog: (workspacePath: string, limit?: number) => Promise<any[]>
+            gitLog: (workspacePath: string, limit?: number) => Promise<GitLogEntry[]>
             gitReset: (workspacePath: string, commitHash: string, hard?: boolean) => Promise<boolean>
-            gitListBranches: (workspacePath: string) => Promise<{ current: string; all: string[]; branches: any } | null>
+            gitListBranches: (workspacePath: string) => Promise<{ current: string; all: string[]; branches: Record<string, unknown>; worktreeBranches?: string[] } | null>
             gitCheckout: (workspacePath: string, branchName: string) => Promise<boolean>
             gitMerge: (workspacePath: string, branchName: string) => Promise<{ success: boolean; data?: { merged: boolean; conflicts?: string[]; alreadyUpToDate?: boolean; uncommittedChanges?: boolean }; error?: string }>
             gitMergeAbort: (workspacePath: string) => Promise<{ success: boolean; error?: string }>
@@ -56,9 +56,9 @@ declare global {
             ghCheckAuth: () => Promise<{ authenticated: boolean; message: string }>
             ghAuthLogin: () => Promise<{ success: boolean; message: string }>
             ghCreatePR: (workspacePath: string, title: string, body: string) => Promise<{ success: boolean; url: string }>
-            ghListPRs: (workspacePath: string) => Promise<any[]>
-            ghRepoView: (workspacePath: string) => Promise<any>
-            ghWorkflowStatus: (workspacePath: string) => Promise<IPCResult<any[]>>
+            ghListPRs: (workspacePath: string) => Promise<unknown[]>
+            ghRepoView: (workspacePath: string) => Promise<unknown | null>
+            ghWorkflowStatus: (workspacePath: string) => Promise<IPCResult<unknown[]>>
             ghPushBranch: (workspacePath: string, branchName: string) => Promise<IPCResult<void>>
             ghMergePR: (workspacePath: string, prNumber: number) => Promise<{ success: boolean; message: string }>
             ghCreatePRFromWorktree: (workspacePath: string, branchName: string, title: string, body: string) => Promise<IPCResult<{ url: string }>>
