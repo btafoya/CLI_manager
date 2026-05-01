@@ -1529,7 +1529,7 @@ app.whenReady().then(async () => {
                 }
             } catch (worktreeErr) {
                 // Worktree command might fail if not supported, ignore
-                console.log('Could not get worktree list:', worktreeErr)
+                // Silently ignore worktree errors
             }
 
             return {
@@ -1557,24 +1557,16 @@ app.whenReady().then(async () => {
 
     // Git merge - merge local branches
     ipcMain.handle('git-merge', async (_, workspacePath: string, branchName: string): Promise<IPCResult<{ merged: boolean; conflicts?: string[]; alreadyUpToDate?: boolean; uncommittedChanges?: string[] }>> => {
-        console.log('[git-merge] ========== START ==========')
-        console.log('[git-merge] workspacePath:', workspacePath)
-        console.log('[git-merge] branchName to merge:', branchName)
 
         try {
             const git = simpleGit(workspacePath)
 
             // Log current branch info before merge
             const beforeStatus = await git.status()
-            console.log('[git-merge] Current branch:', beforeStatus.current)
-            console.log('[git-merge] Is clean:', beforeStatus.isClean())
-            console.log('[git-merge] Modified files:', beforeStatus.modified)
-            console.log('[git-merge] Staged files:', beforeStatus.staged)
 
             // Check for uncommitted changes before merge
             if (!beforeStatus.isClean()) {
                 const uncommittedFiles = [...beforeStatus.modified, ...beforeStatus.staged, ...beforeStatus.not_added]
-                console.log('[git-merge] Uncommitted changes detected:', uncommittedFiles)
                 return {
                     success: false,
                     error: `Cannot merge: You have uncommitted changes.\n\nModified files:\n${uncommittedFiles.join('\n')}\n\nPlease commit or stash your changes first.`,
@@ -1585,23 +1577,15 @@ app.whenReady().then(async () => {
 
             // Check if branch exists
             const branches = await git.branch()
-            console.log('[git-merge] Available branches:', branches.all)
-            console.log('[git-merge] Branch exists:', branches.all.includes(branchName))
 
             // Execute merge
-            console.log('[git-merge] Executing: git merge', branchName)
             const result = await git.merge([branchName])
-            console.log('[git-merge] Merge result:', JSON.stringify(result, null, 2))
 
             // Check status after merge
             const afterStatus = await git.status()
-            console.log('[git-merge] After merge - current branch:', afterStatus.current)
-            console.log('[git-merge] After merge - conflicted:', afterStatus.conflicted)
-            console.log('[git-merge] After merge - modified:', afterStatus.modified)
 
             // Check for conflicts
             if (result.failed) {
-                console.log('[git-merge] Merge FAILED - conflicts detected')
                 return {
                     success: false,
                     error: 'Merge conflict occurred',
@@ -1613,26 +1597,18 @@ app.whenReady().then(async () => {
             // Check if nothing was merged (already up to date)
             const noChanges = result.summary.changes === 0 && result.summary.insertions === 0 && result.summary.deletions === 0
             if (noChanges) {
-                console.log('[git-merge] No changes - Already up to date')
-                console.log('[git-merge] ========== END ==========')
                 return {
                     success: true,
                     data: { merged: true, alreadyUpToDate: true }
                 }
             }
 
-            console.log('[git-merge] Merge SUCCESS with changes')
-            console.log('[git-merge] ========== END ==========')
             return { success: true, data: { merged: true, alreadyUpToDate: false } }
         } catch (e) {
-            console.error('[git-merge] ERROR:', (e instanceof Error ? e.message : String(e)))
-            console.error('[git-merge] Full error:', e)
             // Handle conflict case
             if ((e instanceof Error ? e.message : String(e))?.includes('CONFLICTS') || (e instanceof Error ? e.message : String(e))?.includes('conflict')) {
                 const git = simpleGit(workspacePath)
                 const status = await git.status()
-                console.log('[git-merge] Conflict detected via exception')
-                console.log('[git-merge] Conflicted files:', status.conflicted)
                 return {
                     success: false,
                     error: 'Merge conflict occurred',
@@ -1850,10 +1826,7 @@ app.whenReady().then(async () => {
     ipcMain.handle('show-message-box', async (_, options: { type: 'info' | 'warning' | 'error' | 'question'; title: string; message: string; detail?: string; buttons: string[]; icon?: string }) => {
         // Use provided icon or default to app logo
         const iconPath = options.icon ? path.resolve(options.icon) : logoIcon
-        console.log('[showMessageBox] Icon path:', iconPath)
-        console.log('[showMessageBox] File exists:', existsSync(iconPath))
         const dialogIcon = nativeImage.createFromPath(iconPath)
-        console.log('[showMessageBox] Icon isEmpty:', dialogIcon.isEmpty())
         const result = await dialog.showMessageBox({
             type: options.type,
             title: options.title,
@@ -2009,22 +1982,16 @@ app.whenReady().then(async () => {
             // 1. Try bundled ripgrep (always available, fastest)
             try {
                 const ripgrepPath = getRipgrepPath()
-                console.log('[searchContent] Trying ripgrep:', ripgrepPath)
-                console.log('[searchContent] File exists:', existsSync(ripgrepPath))
                 return await tryRipgrep(ripgrepPath, 'ripgrep (bundled)')
             } catch (bundledError) {
-                console.log('[searchContent] Bundled ripgrep failed:', bundledError)
-                console.log('[searchContent] Trying system ripgrep')
 
                 // 2. Try system ripgrep (if installed via brew)
                 try {
                     const { stdout: rgVersion } = await execAsync('which rg')
                     const systemRgPath = rgVersion.trim()
-                    console.log('[searchContent] Found system ripgrep:', systemRgPath)
                     return await tryRipgrep(systemRgPath, 'ripgrep (system)')
                 } catch (systemError) {
                     // 3. Fallback to Node.js implementation
-                    console.log('[searchContent] No ripgrep available, using Node.js fallback')
 
                 const results: Array<{
                     path: string
@@ -2122,7 +2089,6 @@ app.whenReady().then(async () => {
                 }
             }
         } catch (error) {
-            console.error('[searchContent] Error:', error)
             return { success: false, error: (error instanceof Error ? error.message : String(error)), results: [] }
         }
     })
@@ -2137,22 +2103,22 @@ app.whenReady().then(async () => {
         try {
             await execWithShell('git --version')
             tools.git = true
-        } catch (e) {
-            console.log('Git not found')
+        } catch {
+            // Git not installed
         }
 
         try {
             await execWithShell('gh --version')
             tools.gh = true
-        } catch (e) {
-            console.log('GitHub CLI not found')
+        } catch {
+            // GitHub CLI not installed
         }
 
         try {
             await execWithShell('brew --version')
             tools.brew = true
-        } catch (e) {
-            console.log('Homebrew not found')
+        } catch {
+            // Homebrew not installed
         }
 
         return tools
@@ -2162,54 +2128,38 @@ app.whenReady().then(async () => {
     ipcMain.handle('open-in-editor', async (_, workspacePath: string, editorType?: string) => {
         try {
             const settings = store.get('settings') as UserSettings
-            // Get default editor from settings if not specified
             const editor = editorType || settings?.defaultEditor || 'vscode'
 
-            console.log('[open-in-editor] Editor type:', editor)
-            console.log('[open-in-editor] Workspace path:', workspacePath)
-
-            let command: string
-
             if (editor === 'custom') {
-                // Use custom editor path from settings
                 const customPath = settings?.customEditorPath
-                console.log('[open-in-editor] Custom editor path:', customPath)
                 if (!customPath) {
                     throw new Error('Custom editor path not configured')
                 }
-                // Trim whitespace to prevent issues with extra spaces
-                command = customPath.trim()
-            } else {
-                // Map editor type to command (platform-aware)
-                const editorCommands: Record<string, string> = {
-                    'vscode': 'code',
-                    'cursor': 'cursor',
-                    'antigravity': process.platform === 'darwin' ? 'open -a "Antigravity"' : 'antigravity'
-                }
-                command = editorCommands[editor]
-                if (!command) {
-                    throw new Error(`Unknown editor type: ${editor}`)
-                }
+                const fullCommand = `${shellQuote(customPath.trim())} ${shellQuote(workspacePath)}`
+                await execWithShell(fullCommand)
+                return { success: true, editor }
             }
 
-            // Execute editor command using login shell (via execWithShell helper)
-            // For 'open -a' commands on macOS, don't escape (already properly formatted)
-            // For other commands, escape if they contain spaces
-            const escapedCommand = (process.platform === 'darwin' && command.startsWith('open -a'))
-                ? command
-                : (command.includes(' ') ? `"${command}"` : command)
+            if (editor === 'antigravity' && process.platform === 'darwin') {
+                await execWithShell(`open -a ${shellQuote('Antigravity')} ${shellQuote(workspacePath)}`)
+                return { success: true, editor }
+            }
 
-            const fullCommand = `${escapedCommand} .`
-            console.log('[open-in-editor] Executing command:', fullCommand)
-            console.log('[open-in-editor] Working directory:', workspacePath)
+            const editorCommands: Record<string, string> = {
+                'vscode': 'code',
+                'cursor': 'cursor',
+                'antigravity': 'antigravity'
+            }
+            const command = editorCommands[editor]
+            if (!command) {
+                throw new Error(`Unknown editor type: ${editor}`)
+            }
 
-            await execWithShell(fullCommand, { cwd: workspacePath })
+            const fullCommand = `${shellQuote(command)} ${shellQuote(workspacePath)}`
+            await execWithShell(fullCommand)
 
-            console.log('[open-in-editor] Command executed successfully')
             return { success: true, editor }
         } catch (e) {
-            console.error('[open-in-editor] ERROR:', (e instanceof Error ? e.message : String(e)))
-            console.error('[open-in-editor] Full error:', e)
             return { success: false, error: (e instanceof Error ? e.message : String(e)) }
         }
     })
@@ -2285,8 +2235,6 @@ app.whenReady().then(async () => {
         line?: number,
         column?: number
     ): Promise<{ success: boolean; error?: string }> => {
-        console.log('[open-file-in-editor] ===== START =====')
-        console.log('[open-file-in-editor] Input:', { filePath, baseCwd, line, column })
 
         try {
             const settings = store.get('settings') as UserSettings
@@ -2305,40 +2253,29 @@ app.whenReady().then(async () => {
 
             // Strategy 1: If absolute path (including expanded ~), check if exists
             if (path.isAbsolute(absolutePath)) {
-                console.log('[open-file-in-editor] Path is absolute, checking if exists...')
-                console.log('[open-file-in-editor] File exists?', existsSync(absolutePath))
                 if (existsSync(absolutePath)) {
                     found = true
-                    console.log('[open-file-in-editor] ✓ Found with Strategy 1 (absolute path)')
                 } else {
                     // Strategy 2: Treat as project-root relative (e.g., /jcon/api/... -> cwd/jcon/api/...)
                     const cwdRelative = path.join(baseCwd, absolutePath)
-                    console.log('[open-file-in-editor] Trying Strategy 2 (cwd relative):', cwdRelative)
-                    console.log('[open-file-in-editor] File exists?', existsSync(cwdRelative))
                     if (existsSync(cwdRelative)) {
                         absolutePath = cwdRelative
                         found = true
-                        console.log('[open-file-in-editor] ✓ Found with Strategy 2')
                     }
                 }
             } else {
                 // Strategy 3: Relative path from cwd
                 absolutePath = path.resolve(baseCwd, absolutePath)
-                console.log('[open-file-in-editor] Trying Strategy 3 (resolve):', absolutePath)
                 found = existsSync(absolutePath)
-                console.log('[open-file-in-editor] File exists?', found)
                 if (found) {
-                    console.log('[open-file-in-editor] ✓ Found with Strategy 3')
                 }
             }
 
             // 2. Check if file exists
             if (!found) {
-                console.log('[open-file-in-editor] ✗ File not found!')
                 return { success: false, error: `File not found: ${filePath}` }
             }
 
-            console.log('[open-file-in-editor] Final absolutePath:', absolutePath)
 
             // 3. Get editor command
             let command: string
@@ -2347,7 +2284,7 @@ app.whenReady().then(async () => {
                 if (!customPath) {
                     return { success: false, error: 'Custom editor path not configured' }
                 }
-                command = customPath
+                command = customPath.trim()
             } else {
                 const editorCommands: Record<string, string> = {
                     'vscode': 'code',
@@ -2360,34 +2297,20 @@ app.whenReady().then(async () => {
                 }
             }
 
-            // 4. Build command with project folder + file
-            // VSCode, Cursor support: code /project -g file:line:column
-            const escapedPath = absolutePath.replace(/'/g, "'\\''")
-            const escapedCwd = baseCwd.replace(/'/g, "'\\''")
-
-            let fullCommand: string
-            if (!command.startsWith('open -a')) {
-                // Editors like VSCode/Cursor: open project folder + goto file:line
-                if (line) {
-                    const location = column
-                        ? `${absolutePath}:${line}:${column}`
-                        : `${absolutePath}:${line}`
-                    const escapedLocation = location.replace(/'/g, "'\\''")
-                    fullCommand = `${command} '${escapedCwd}' -g '${escapedLocation}'`
-                } else {
-                    fullCommand = `${command} '${escapedCwd}' '${escapedPath}'`
-                }
-            } else {
-                // For 'open -a' commands: open project folder, then file
-                fullCommand = `${command} '${escapedCwd}' '${escapedPath}'`
+            // 4. Build safe shell command with shellQuote for all arguments
+            if (editor === 'antigravity' && process.platform === 'darwin') {
+                await execWithShell(`open -a ${shellQuote('Antigravity')} ${shellQuote(absolutePath)}`)
+                return { success: true }
             }
 
-            console.log('[open-file-in-editor] Executing:', fullCommand)
+            const fullCommand = line
+                ? `${shellQuote(command)} ${shellQuote(baseCwd)} -g ${shellQuote(`${absolutePath}:${line}${column ? `:${column}` : ''}`)}`
+                : `${shellQuote(command)} ${shellQuote(baseCwd)} ${shellQuote(absolutePath)}`
+
             await execWithShell(fullCommand)
 
             return { success: true }
         } catch (e) {
-            console.error('[open-file-in-editor] Error:', (e instanceof Error ? e.message : String(e)))
             return { success: false, error: (e instanceof Error ? e.message : String(e)) }
         }
     })
@@ -2536,7 +2459,6 @@ function enterBackgroundMode(): void {
         app.dock.hide()
     }
 
-    console.log('[Background Mode] Entered - terminals still running')
 }
 
 /**
@@ -2567,7 +2489,6 @@ function showFromBackground(): void {
         tray = null
     }
 
-    console.log('[Background Mode] Exited - window restored')
 }
 
 // In this file you can include the rest of your app"s specific main process
@@ -2585,27 +2506,22 @@ function sendUpdateStatus(status: string, data?: any) {
 }
 
 autoUpdater.on('checking-for-update', () => {
-    console.log('Checking for update...')
     sendUpdateStatus('checking')
 })
 
 autoUpdater.on('update-available', (info) => {
-    console.log('Update available:', info.version)
     sendUpdateStatus('available', { version: info.version })
 })
 
 autoUpdater.on('update-not-available', () => {
-    console.log('Already up to date.')
     sendUpdateStatus('not-available')
 })
 
 autoUpdater.on('download-progress', (progress) => {
-    console.log(`Download progress: ${Math.round(progress.percent)}%`)
     sendUpdateStatus('downloading', { percent: Math.round(progress.percent) })
 })
 
 autoUpdater.on('update-downloaded', (info) => {
-    console.log('Update downloaded:', info.version)
     sendUpdateStatus('ready', { version: info.version })
 })
 
@@ -2622,15 +2538,10 @@ ipcMain.handle('check-for-update', async () => {
     }
 
     try {
-        console.log('Checking for updates...')
-        console.log('Current version:', app.getVersion())
-
         const result = await autoUpdater.checkForUpdates()
         const currentVersion = app.getVersion()
         const latestVersion = result?.updateInfo?.version
 
-        console.log('Latest version:', latestVersion)
-        console.log('Update info:', JSON.stringify(result?.updateInfo, null, 2))
 
         if (latestVersion && latestVersion !== currentVersion) {
             return { success: true, version: latestVersion, hasUpdate: true }

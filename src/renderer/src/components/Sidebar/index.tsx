@@ -448,10 +448,6 @@ export function Sidebar({
                     await showAlert('Merge Completed', 'Merge completed successfully!')
                 }
             } else {
-                console.log('[handleMergeToMain] Merge FAILED')
-                console.log('[handleMergeToMain] Error:', mergeResult.error)
-                console.log('[handleMergeToMain] Conflicts:', mergeResult.data?.conflicts)
-
                 if (mergeResult.data?.conflicts && mergeResult.data.conflicts.length > 0) {
                     // Ask user if they want to open editor to resolve conflicts
                     const openEditor = await showConfirm(
@@ -469,7 +465,6 @@ export function Sidebar({
             console.error('[handleMergeToMain] Exception:', err)
             await showAlert('Merge Failed', `Merge failed: ${(err instanceof Error ? err.message : String(err))}`, 'error')
         }
-        console.log('[handleMergeToMain] ========== END ==========')
     }
 
     const handlePullFromMain = async () => {
@@ -484,12 +479,6 @@ export function Sidebar({
         const parentBranches = workspaceBranches.get(parentWorkspace.id)
         const mainBranch = parentBranches?.current || 'main'
 
-        console.log('[handlePullFromMain] ========== START ==========')
-        console.log('[handlePullFromMain] Worktree:', worktreeMenuOpen.workspace.name)
-        console.log('[handlePullFromMain] Worktree path:', worktreeMenuOpen.workspace.path)
-        console.log('[handlePullFromMain] Worktree branch:', worktreeMenuOpen.workspace.branchName)
-        console.log('[handlePullFromMain] Main branch to pull:', mainBranch)
-
         const confirmed = await showConfirm(
             'Pull from Main',
             `Pull changes from "${mainBranch}" into "${worktreeMenuOpen.workspace.branchName}"?`
@@ -497,16 +486,9 @@ export function Sidebar({
         if (!confirmed) return
 
         try {
-            console.log('[handlePullFromMain] Calling gitMerge...')
-            console.log('[handlePullFromMain] - path:', worktreeMenuOpen.workspace.path)
-            console.log('[handlePullFromMain] - branch:', mainBranch)
-
             const mergeResult = await window.api.gitMerge(worktreeMenuOpen.workspace.path, mainBranch)
 
-            console.log('[handlePullFromMain] gitMerge result:', JSON.stringify(mergeResult, null, 2))
-
             if (mergeResult.success) {
-                console.log('[handlePullFromMain] Pull SUCCESS')
                 // Check if already up to date (no actual changes)
                 if (mergeResult.data?.alreadyUpToDate) {
                     await showAlert('Already Up to Date', 'No new changes from main branch.')
@@ -514,10 +496,6 @@ export function Sidebar({
                     await showAlert('Pull Completed', 'Successfully pulled changes from main!')
                 }
             } else {
-                console.log('[handlePullFromMain] Pull FAILED')
-                console.log('[handlePullFromMain] Error:', mergeResult.error)
-                console.log('[handlePullFromMain] Conflicts:', mergeResult.data?.conflicts)
-
                 if (mergeResult.data?.conflicts && mergeResult.data.conflicts.length > 0) {
                     // Ask user if they want to open editor to resolve conflicts
                     const openEditor = await showConfirm(
@@ -535,7 +513,6 @@ export function Sidebar({
             console.error('[handlePullFromMain] Exception:', err)
             await showAlert('Merge Failed', `Merge failed: ${(err instanceof Error ? err.message : String(err))}`, 'error')
         }
-        console.log('[handlePullFromMain] ========== END ==========')
     }
 
     const handleRenameSubmit = (workspaceId: string, sessionId: string, newName: string) => {

@@ -120,7 +120,7 @@ declare global {
             validateEditorPath: (editorPath: string, testDir?: string) => Promise<{ valid: boolean; resolvedPath?: string; error?: string }>
 
             // Updates
-            checkForUpdate: () => Promise<{ success: boolean; version?: string; hasUpdate?: boolean; error?: string }>
+            checkForUpdate: () => Promise<{ success: boolean; version?: string; hasUpdate?: boolean; error?: string; isDev?: boolean }>
             downloadUpdate: () => Promise<{ success: boolean; error?: string }>
             installUpdate: () => Promise<void>
             onUpdateStatus: (callback: (status: { status: string; version?: string; percent?: number; message?: string }) => void) => () => void

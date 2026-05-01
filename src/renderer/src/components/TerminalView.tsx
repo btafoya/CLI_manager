@@ -386,7 +386,7 @@ export function TerminalView({
             allowProposedApi: true,
             cursorBlink: true,
             scrollback: 10000  // 기본값 1000 → 10000 (더 많은 히스토리 보관)
-        } as any)
+        })
 
         // VS Code also enables this to handle full-screen erase/redraw sequences more predictably.
         ;(term.options as typeof term.options & { scrollOnEraseInDisplay?: boolean }).scrollOnEraseInDisplay = true

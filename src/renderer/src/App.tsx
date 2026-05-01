@@ -213,7 +213,7 @@ function App() {
     useEffect(() => {
         const checkUpdate = async () => {
             try {
-                const result = await window.api.checkForUpdate() as any
+                const result = await window.api.checkForUpdate()
                 if (result.success && result.hasUpdate && result.version) {
                     setUpdateVersion(result.version)
                     setShowUpdateNotification(true)

@@ -203,14 +203,12 @@ export class TerminalManager {
         for (const fallback of FALLBACK_SHELLS) {
             if (fallback.startsWith('/')) {
                 if (existsSync(fallback)) {
-                    console.log(`Using fallback shell: ${fallback}`)
                     return fallback
                 }
             } else {
                 try {
                     const resolved = execFileSync('which', [fallback], { encoding: 'utf-8' }).trim()
                     if (resolved && existsSync(resolved)) {
-                        console.log(`Using fallback shell: ${resolved}`)
                         return resolved
                     }
                 } catch {
@@ -342,7 +340,6 @@ export class TerminalManager {
         for (const [id, ptyProcess] of this.terminals) {
             try {
                 ptyProcess.kill()
-                console.log(`Killed terminal: ${id}`)
             } catch (e) {
                 console.error(`Failed to kill terminal ${id}:`, e)
             }
@@ -354,13 +351,11 @@ export class TerminalManager {
     private createTerminal(id: string, cwd: string, cols: number = 80, rows: number = 30, requestedShell?: string) {
         // 이미 존재하는 터미널이면 생성 건너뛰기
         if (this.terminals.has(id)) {
-            console.log(`Terminal ${id} already exists, skipping creation`)
             return
         }
 
         // Resolve shell with validation and fallback
         const shell = this.resolveShell(requestedShell)
-        console.log(`Creating terminal with shell: ${shell}`)
 
         // Use login shell on Unix-like systems to load full PATH from .zprofile/.bash_profile
         // This fixes "command not found" errors for brew, claude, direnv, etc.
@@ -382,7 +377,7 @@ export class TerminalManager {
                 // Ensure UTF-8 locale for proper Korean input
                 LANG: process.env.LANG || 'en_US.UTF-8',
                 LC_ALL: process.env.LC_ALL || 'en_US.UTF-8'
-            } as any
+            } as { [key: string]: string }
         })
 
         ptyProcess.onData((data: string) => {

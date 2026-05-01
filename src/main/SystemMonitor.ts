@@ -1,6 +1,6 @@
 import { exec } from 'child_process'
 import { ipcMain } from 'electron'
-import { SystemInfo } from '../shared/types'
+import { SystemInfo, Workspace } from '../shared/types'
 import { promisify } from 'util'
 import os from 'os'
 import Store from 'electron-store'
@@ -293,12 +293,12 @@ export class SystemMonitor {
      */
     private getTerminalInfo(): SystemInfo['terminal'] {
         try {
-            const workspaces = this.store.get('workspaces') as any[] || []
+            const workspaces = (this.store.get('workspaces') as Workspace[] | undefined) || []
             // Count only non-worktree workspaces
-            const workspaceCount = workspaces.filter((w: any) => !w.parentWorkspaceId).length
+            const workspaceCount = workspaces.filter(w => !w.parentWorkspaceId).length
             // Count all sessions across all workspaces
             const activeSessionCount = workspaces.reduce(
-                (sum: number, w: any) => sum + (w.sessions?.length || 0), 0
+                (sum, w) => sum + (w.sessions?.length || 0), 0
             )
 
             return { activeSessionCount, workspaceCount }
